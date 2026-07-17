@@ -1,0 +1,16 @@
+{
+  "name": "smart-inventory-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm run dev -w @smart-inventory/frontend",
+    "build:frontend": "npm run build -w @smart-inventory/frontend",
+    "typecheck:frontend": "npm run typecheck -w @smart-inventory/frontend",
+    "dev:backend": "npm run dev -w @smart-inventory/backend",
+    "build:backend": "npm run build -w @smart-inventory/backend",
+    "typecheck:backend": "npm run typecheck -w @smart-inventory/backend"
+  },
+  "workspaces": [
+    "apps/*"
+  ]
+}

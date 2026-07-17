@@ -1,0 +1,29 @@
+.DS_Store
+.env
+.env.*.local
+
+# dependencies
+**/node_modules
+
+# next.js
+**/.next
+**/out
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# build
+**/dist
+
+# tooling
+**/.turbo
+.eslintcache
+
+# OS / IDE
+Thumbs.db
+.vscode
+
+node_modules

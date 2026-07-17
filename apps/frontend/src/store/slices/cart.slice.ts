@@ -1,0 +1,62 @@
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+
+export interface CartItem {
+  productId: string;
+  name: string;
+  imageUrl?: string;
+  sellingPrice: number; // rupees
+  mrp: number;
+  unit: string;
+  quantity: number;
+  stock: number; // max available
+}
+
+interface CartState {
+  items: CartItem[];
+}
+
+const initialState: CartState = { items: [] };
+
+const cartSlice = createSlice({
+  name: 'cart',
+  initialState,
+  reducers: {
+    addToCart(state, action: PayloadAction<Omit<CartItem, 'quantity'>>) {
+      const existing = state.items.find((i) => i.productId === action.payload.productId);
+      if (existing) {
+        existing.quantity = Math.min(existing.quantity + 1, action.payload.stock);
+      } else {
+        state.items.push({ ...action.payload, quantity: 1 });
+      }
+    },
+    removeFromCart(state, action: PayloadAction<string>) {
+      state.items = state.items.filter((i) => i.productId !== action.payload);
+    },
+    updateQuantity(
+      state,
+      action: PayloadAction<{ productId: string; quantity: number }>,
+    ) {
+      const item = state.items.find((i) => i.productId === action.payload.productId);
+      if (item) {
+        if (action.payload.quantity <= 0) {
+          state.items = state.items.filter((i) => i.productId !== action.payload.productId);
+        } else {
+          item.quantity = Math.min(action.payload.quantity, item.stock);
+        }
+      }
+    },
+    clearCart(state) {
+      state.items = [];
+    },
+  },
+});
+
+export const { addToCart, removeFromCart, updateQuantity, clearCart } = cartSlice.actions;
+export const cartReducer = cartSlice.reducer;
+
+// ── Selectors ─────────────────────────────────────────────────────────────────
+export const selectCartItems = (state: { cart: CartState }) => state.cart.items;
+export const selectCartCount = (state: { cart: CartState }) =>
+  state.cart.items.reduce((n, i) => n + i.quantity, 0);
+export const selectCartTotal = (state: { cart: CartState }) =>
+  state.cart.items.reduce((sum, i) => sum + i.sellingPrice * i.quantity, 0);
