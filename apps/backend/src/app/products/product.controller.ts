@@ -23,7 +23,9 @@ const productBodySchema = z.object({
   }),
   hsnCode: z.string().max(20).trim().optional(),
   stock: z.coerce.number().int().nonnegative("Stock must be ≥ 0"),
+  reservedStock: z.coerce.number().int().nonnegative("Reserved stock must be ≥ 0").optional(),
   minimumStock: z.coerce.number().int().nonnegative("Minimum stock must be ≥ 0"),
+  maximumStock: z.coerce.number().int().nonnegative("Maximum stock must be ≥ 0").optional(),
   unit: z.enum(PRODUCT_UNITS as unknown as [string, ...string[]]),
   isActive: z
     .union([z.boolean(), z.string()])

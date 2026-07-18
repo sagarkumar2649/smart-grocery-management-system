@@ -36,7 +36,9 @@ export interface IProduct extends Document {
   gstPercent: GstRate;
   hsnCode?: string;
   stock: number;
+  reservedStock: number;
   minimumStock: number;
+  maximumStock: number;
   unit: ProductUnit;
   imageUrl?: string;
   imagePublicId?: string;
@@ -105,7 +107,19 @@ const productSchema = new Schema<IProduct>(
       min: 0,
       default: 0,
     },
+    reservedStock: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
     minimumStock: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    maximumStock: {
       type: Number,
       required: true,
       min: 0,

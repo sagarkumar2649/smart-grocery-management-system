@@ -7,6 +7,7 @@ import { buildCategoryRouter } from "./categories/category.routes.js";
 import { buildProductRouter } from "./products/product.routes.js";
 import { buildUserRouter } from "./users/user.routes.js";
 import { buildStoreSettingsRouter } from "./store-settings/store-settings.routes.js";
+import { buildInventoryRouter } from "./inventory/inventory.routes.js";
 
 export function buildApiRouter(): Router {
   const router = Router();
@@ -16,6 +17,7 @@ export function buildApiRouter(): Router {
   router.use("/products", buildProductRouter());
   router.use("/users", buildUserRouter());
   router.use("/store-settings", buildStoreSettingsRouter());
+  router.use("/inventory", buildInventoryRouter());
 
   router.get("/health", async (_req, res) => {
     const mongo = getMongoConnectionState();

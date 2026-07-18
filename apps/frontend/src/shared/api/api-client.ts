@@ -25,7 +25,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 // Shared unauthenticated client for public endpoints (e.g. GET /categories).
 export const publicClient = createHttpClient(BASE_URL);
 
-type GetToken = () => Promise<string | null>;
+export type GetToken = () => Promise<string | null>;
 
 /** Wraps createHttpClient and injects a Clerk `getToken` into every request. */
 export function createAuthedClient(getToken: GetToken) {

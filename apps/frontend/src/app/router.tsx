@@ -10,6 +10,7 @@ import { ProfilePage } from '@/app/pages/ProfilePage';
 import { PlaceholderPage } from '@/app/pages/PlaceholderPage';
 import { ProductsPage } from '@/features/products/pages/ProductsPage';
 import { StoreSettingsPage } from '@/features/store/pages/StoreSettingsPage';
+import { InventoryPage } from '@/features/inventory/pages/InventoryPage';
 import { StoreHomePage } from '@/features/store/pages/StoreHomePage';
 import { StoreProductsPage } from '@/features/store/pages/StoreProductsPage';
 import { StoreProductDetailPage } from '@/features/store/pages/StoreProductDetailPage';
@@ -54,7 +55,7 @@ export const router = createBrowserRouter([
               { path: 'dashboard', element: <DashboardPage /> },
               { path: 'products', element: <ProductsPage /> },
               { path: 'store-settings', element: <StoreSettingsPage /> },
-              { path: 'inventory', element: <PlaceholderPage title="Inventory" /> },
+              { path: 'inventory', element: <InventoryPage /> },
               { path: 'customers', element: <PlaceholderPage title="Customers" /> },
               { path: 'suppliers', element: <PlaceholderPage title="Suppliers" /> },
               { path: 'reports', element: <PlaceholderPage title="Reports" /> },
