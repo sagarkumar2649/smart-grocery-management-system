@@ -9,36 +9,26 @@ export interface AuthenticatedRequest extends Request {
 }
 
 /**
- * Verifies the Clerk session token from Authorization: Bearer <token>.
- *
- * WHY verifyToken instead of authenticateRequest:
- *   authenticateRequest() expects a Web Fetch API Request object with a
- *   headers.get() method. Express IncomingMessage uses a plain object for
- *   headers, so authenticateRequest() always sees no token and returns
- *   isSignedIn=false. verifyToken() takes the raw string directly.
+ * Extracts and verifies the Clerk JWT from the request, populating req.auth.
+ * Returns true if the token is valid, false otherwise (response already sent).
  */
-export async function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
+async function authenticateRequest(req: Request, res: Response): Promise<boolean> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json(fail('UNAUTHORIZED', 'Missing or invalid Authorization header'));
-    return;
+    return false;
   }
 
   const token = authHeader.slice(7);
   if (!token) {
     res.status(401).json(fail('UNAUTHORIZED', 'Missing token'));
-    return;
+    return false;
   }
 
   try {
     const payload = await verifyToken(token, {
       secretKey: env.CLERK_SECRET_KEY,
-      authorizedParties: [env.CORS_ORIGIN],
     });
 
     (req as AuthenticatedRequest).auth = {
@@ -46,11 +36,34 @@ export async function requireAuth(
       sessionId: (payload as typeof payload & { sid: string }).sid,
     };
 
-    next();
+    return true;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Token verification failed';
     res.status(401).json(fail('UNAUTHORIZED', message));
+    return false;
   }
+}
+
+/**
+ * Verifies the Clerk session token from Authorization: Bearer <token>.
+ *
+ * WHY verifyToken instead of authenticateRequest (Clerk SDK helper):
+ *   authenticateRequest() expects a Web Fetch API Request object with a
+ *   headers.get() method. Express IncomingMessage uses a plain object for
+ *   headers, so authenticateRequest() always sees no token and returns
+ *   isSignedIn=false. verifyToken() takes the raw string directly.
+ *
+ * NOTE: authorizedParties is intentionally omitted. Clerk JWTs carry the
+ * publishable key as the azp (authorized party), not the frontend origin URL.
+ * Passing the origin here would cause legitimate tokens to be rejected.
+ */
+export async function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const ok = await authenticateRequest(req, res);
+  if (ok) next();
 }
 
 /**
@@ -66,13 +79,9 @@ export async function requireAdmin(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  // Step 1: verify Clerk token and populate req.auth
-  await new Promise<void>((resolve) => {
-    void requireAuth(req, res, () => resolve());
-  });
-
-  // If requireAuth already sent a response (401), stop here.
-  if (res.headersSent) return;
+  // Step 1: verify Clerk token and populate req.auth.
+  const authOk = await authenticateRequest(req, res);
+  if (!authOk) return;
 
   const clerkId = (req as AuthenticatedRequest).auth?.userId;
   if (!clerkId) {
