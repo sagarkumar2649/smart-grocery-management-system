@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '@/store/hooks';
-import { addToCart } from '@/store/slices/cart.slice';
+import { addToCart, addBuyNowItem } from '@/store/slices/cart.slice';
 import type { Product } from '@/features/products/api/products-api';
 
 function formatINR(amount: number): string {
@@ -17,6 +17,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -41,7 +42,7 @@ export function ProductCard({ product }: ProductCardProps) {
     e.stopPropagation();
     if (product.stock > 0) {
       dispatch(
-        addToCart({
+        addBuyNowItem({
           productId: product._id,
           name: product.name,
           ...(product.imageUrl ? { imageUrl: product.imageUrl } : {}),
@@ -51,7 +52,7 @@ export function ProductCard({ product }: ProductCardProps) {
           stock: product.stock,
         }),
       );
-      window.location.href = '/store/cart';
+      navigate('/store/checkout');
     }
   };
 
@@ -65,7 +66,7 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       to={`/store/products/${product._id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-gray-100 shadow-sm transition-all duration-300 hover:shadow-lg hover:ring-gray-200 hover:-translate-y-0.5"
+      className="group flex flex-col overflow-hidden rounded-2xl bg-surface ring-1 ring-gray-100 shadow-sm transition-all duration-300 hover:shadow-lg hover:ring-gray-200 hover:-translate-y-0.5"
     >
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-50">
@@ -88,7 +89,7 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
 
         {isOutOfStock && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-[1px]">
+          <div className="absolute inset-0 flex items-center justify-center bg-surface/80 backdrop-blur-[1px]">
             <span className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white">
               Out of Stock
             </span>
@@ -104,7 +105,7 @@ export function ProductCard({ product }: ProductCardProps) {
               {product.category.name}
             </p>
           )}
-          <h3 className="mt-1 text-sm font-semibold text-gray-900 line-clamp-2 leading-snug group-hover:text-primary transition-colors duration-200">
+          <h3 className="mt-1 text-sm font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors duration-200">
             {product.name}
           </h3>
           {product.brand && (
@@ -116,7 +117,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="flex items-end justify-between">
           <div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-bold text-gray-900">
+              <span className="text-lg font-bold text-foreground">
                 {formatINR(product.sellingPrice)}
               </span>
             </div>
@@ -134,7 +135,7 @@ export function ProductCard({ product }: ProductCardProps) {
             <button
               type="button"
               onClick={handleAddToCart}
-              className="flex-1 rounded-xl border-2 border-primary bg-white px-3 py-2 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              className="flex-1 rounded-xl border-2 border-primary bg-surface px-3 py-2 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               Add to Cart
             </button>

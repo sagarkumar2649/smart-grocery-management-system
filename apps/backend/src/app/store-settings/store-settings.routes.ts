@@ -38,6 +38,7 @@ const upload = multer({
   { name: 'heroBanner', maxCount: 1 },
   { name: 'storeFront', maxCount: 1 },
   { name: 'logo', maxCount: 1 },
+  { name: 'favicon', maxCount: 1 },
   { name: 'interiorGallery', maxCount: 10 },
 ]);
 

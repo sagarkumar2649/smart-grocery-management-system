@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { AppUser, ADMIN_EMAIL, type AppUserRole } from './app-user.model.js';
 import { ok, fail } from '../response/api-response.js';
 import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
+import { logger } from '../../core/logging/logger.js';
 
 /**
  * POST /api/v1/users/sync
@@ -50,6 +51,8 @@ export async function syncUser(req: Request, res: Response): Promise<void> {
     user.email = normalizedEmail;
     await user.save();
   }
+
+  logger.info({ clerkId, email: normalizedEmail }, 'User synced');
 
   res.status(200).json(
     ok({ id: user.id, clerkId: user.clerkId, name: user.name, email: user.email, role: user.role }),

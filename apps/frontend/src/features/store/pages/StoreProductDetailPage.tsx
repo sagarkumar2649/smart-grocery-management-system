@@ -1,7 +1,7 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useProduct } from '@/features/products/hooks/use-products';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { addToCart } from '@/store/slices/cart.slice';
+import { addToCart, addBuyNowItem } from '@/store/slices/cart.slice';
 import { selectCartItems } from '@/store/slices/cart.slice';
 
 function formatINR(amount: number): string {
@@ -16,6 +16,7 @@ export function StoreProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading, isError } = useProduct(id ?? '');
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const cartItems = useAppSelector(selectCartItems);
 
   const product = data?.data;
@@ -38,8 +39,20 @@ export function StoreProductDetailPage() {
   };
 
   const handleBuyNow = () => {
-    handleAddToCart();
-    window.location.href = '/store/cart';
+    if (product && product.stock > 0) {
+      dispatch(
+        addBuyNowItem({
+          productId: product._id,
+          name: product.name,
+          ...(product.imageUrl ? { imageUrl: product.imageUrl } : {}),
+          sellingPrice: product.sellingPrice,
+          mrp: product.mrp,
+          unit: product.unit,
+          stock: product.stock,
+        }),
+      );
+      navigate('/store/checkout');
+    }
   };
 
   if (isLoading) {
@@ -79,7 +92,7 @@ export function StoreProductDetailPage() {
 
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         {/* Image */}
-        <div className="relative aspect-square overflow-hidden rounded-3xl bg-white ring-1 ring-gray-100 shadow-sm">
+        <div className="relative aspect-square overflow-hidden rounded-3xl bg-surface ring-1 ring-gray-100 shadow-sm">
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
@@ -106,7 +119,7 @@ export function StoreProductDetailPage() {
                 {product.category.name}
               </Link>
             )}
-            <h1 className="mt-2 text-3xl font-bold text-gray-900 sm:text-4xl leading-tight">{product.name}</h1>
+            <h1 className="mt-2 text-3xl font-bold text-foreground sm:text-4xl leading-tight">{product.name}</h1>
             {product.brand && (
               <p className="mt-1 text-sm text-gray-500">Brand: <span className="font-medium text-gray-700">{product.brand}</span></p>
             )}
@@ -115,7 +128,7 @@ export function StoreProductDetailPage() {
           {/* Price block */}
           <div className="rounded-2xl bg-gray-50 p-5 ring-1 ring-gray-100">
             <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-extrabold text-gray-900">
+              <span className="text-4xl font-extrabold text-foreground">
                 {formatINR(product.sellingPrice)}
               </span>
               {discount > 0 && (
@@ -167,7 +180,7 @@ export function StoreProductDetailPage() {
               type="button"
               onClick={handleAddToCart}
               disabled={product.stock <= 0}
-              className="flex-1 rounded-xl border-2 border-primary bg-white px-6 py-3.5 text-sm font-semibold text-primary transition-all duration-200 hover:bg-primary hover:text-white disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              className="flex-1 rounded-xl border-2 border-primary bg-surface px-6 py-3.5 text-sm font-semibold text-primary transition-all duration-200 hover:bg-primary hover:text-white disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               Add to Cart
             </button>
@@ -182,27 +195,27 @@ export function StoreProductDetailPage() {
           </div>
 
           {/* Product Details */}
-          <div className="rounded-2xl bg-white p-5 ring-1 ring-gray-100 shadow-sm">
-            <h2 className="mb-4 text-sm font-bold text-gray-900 uppercase tracking-wider">Product Details</h2>
+          <div className="rounded-2xl bg-surface p-5 ring-1 ring-gray-100 shadow-sm">
+            <h2 className="mb-4 text-sm font-bold text-foreground uppercase tracking-wider">Product Details</h2>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
               {product.sku && (
                 <>
                   <dt className="text-gray-400">SKU</dt>
-                  <dd className="font-medium text-gray-900">{product.sku}</dd>
+                  <dd className="font-medium text-foreground">{product.sku}</dd>
                 </>
               )}
               <dt className="text-gray-400">Unit</dt>
-              <dd className="font-medium text-gray-900">{product.unit}</dd>
+              <dd className="font-medium text-foreground">{product.unit}</dd>
               <dt className="text-gray-400">GST Rate</dt>
-              <dd className="font-medium text-gray-900">{product.gstPercent}%</dd>
+              <dd className="font-medium text-foreground">{product.gstPercent}%</dd>
               {product.hsnCode && (
                 <>
                   <dt className="text-gray-400">HSN Code</dt>
-                  <dd className="font-medium text-gray-900">{product.hsnCode}</dd>
+                  <dd className="font-medium text-foreground">{product.hsnCode}</dd>
                 </>
               )}
               <dt className="text-gray-400">MRP</dt>
-              <dd className="font-medium text-gray-900">{formatINR(product.mrp)}</dd>
+              <dd className="font-medium text-foreground">{formatINR(product.mrp)}</dd>
             </dl>
           </div>
         </div>

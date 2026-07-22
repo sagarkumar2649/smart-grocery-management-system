@@ -12,6 +12,12 @@
   --color-muted-foreground: #6B7280;
   --color-border: #E5E7EB;
   --color-surface: #ffffff;
+  --color-surface-alt: #F1F5F9;
+  --color-card: #ffffff;
+  --color-card-foreground: #111827;
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-input: #E5E7EB;
+  --color-ring: #0F766E;
   --color-slate-700: #374151;
   --color-slate-800: #1F2937;
   --color-slate-900: #111827;
@@ -34,6 +40,48 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* ── Dark Mode ───────────────────────────────────────────────────────────────── */
+
+.dark {
+  --color-background: #0f172a;
+  --color-foreground: #e2e8f0;
+  --color-muted: #64748b;
+  --color-muted-foreground: #94a3b8;
+  --color-border: #1e293b;
+  --color-surface: #1e293b;
+  --color-surface-alt: #1e293b;
+  --color-card: #1e293b;
+  --color-card-foreground: #e2e8f0;
+  --color-input: #334155;
+  --color-ring: #2dd4bf;
+  --color-primary: #14b8a6;
+  --color-primary-foreground: #042f2e;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+
+  --color-gray-50: #1e293b;
+  --color-gray-100: #1e293b;
+  --color-gray-200: #334155;
+  --color-gray-300: #475569;
+  --color-gray-400: #64748b;
+  --color-gray-500: #94a3b8;
+  --color-gray-600: #cbd5e1;
+  --color-gray-700: #e2e8f0;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #f1f5f9;
+
+  --color-teal-50: #042f2e;
+  --color-teal-100: #064e3b;
+  --color-teal-600: #2dd4bf;
+  --color-teal-700: #5eead4;
+  --color-teal-800: #99f6e4;
+  --color-teal-900: #ccfbf1;
+
+  color-scheme: dark;
+}
+
 @layer base {
   *,
   *::before,
@@ -45,6 +93,7 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: color-scheme 0.001s;
   }
 
   body {
@@ -56,5 +105,27 @@
 
   #root {
     min-height: 100vh;
+  }
+}
+
+/* ── Print Styles ────────────────────────────────────────────────────────────── */
+
+@media print {
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .no-print,
+  nav,
+  aside,
+  header,
+  footer {
+    display: none !important;
+  }
+
+  * {
+    box-shadow: none !important;
   }
 }

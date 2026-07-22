@@ -93,7 +93,7 @@ export function StoreHomePage() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path strokeLinecap="round" strokeLinejoin="round" d={f.icon} /></svg>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900">{f.title}</h3>
+                  <h3 className="text-sm font-semibold text-foreground">{f.title}</h3>
                   <p className="mt-0.5 text-xs text-gray-500 leading-relaxed">{f.desc}</p>
                 </div>
               </div>
@@ -106,7 +106,7 @@ export function StoreHomePage() {
           <section className="py-10">
             <div className="flex items-end justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Shop by Category</h2>
+                <h2 className="text-2xl font-bold text-foreground">Shop by Category</h2>
                 <p className="mt-1 text-sm text-gray-500">Browse our wide range of categories</p>
               </div>
               <Link to="/store/categories" className="text-sm font-semibold text-primary hover:text-teal-800 transition-colors hidden sm:block">
@@ -118,12 +118,12 @@ export function StoreHomePage() {
                 <Link
                   key={cat._id}
                   to={`/store/products?category=${cat._id}`}
-                  className="flex flex-col items-center gap-2 rounded-2xl bg-white p-5 ring-1 ring-gray-100 shadow-sm transition-all duration-300 hover:shadow-md hover:ring-primary/20 hover:-translate-y-0.5"
+                  className="flex flex-col items-center gap-2 rounded-2xl bg-surface p-5 ring-1 ring-gray-100 shadow-sm transition-all duration-300 hover:shadow-md hover:ring-primary/20 hover:-translate-y-0.5"
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
                     <span className="text-lg font-bold text-primary">{cat.name.charAt(0)}</span>
                   </div>
-                  <span className="text-xs font-semibold text-gray-900 text-center">{cat.name}</span>
+                  <span className="text-xs font-semibold text-foreground text-center">{cat.name}</span>
                 </Link>
               ))}
             </div>
@@ -134,7 +134,7 @@ export function StoreHomePage() {
         <section className="py-10">
           <div className="flex items-end justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">New Arrivals</h2>
+              <h2 className="text-2xl font-bold text-foreground">New Arrivals</h2>
               <p className="mt-1 text-sm text-gray-500">Recently added to our store</p>
             </div>
             <Link to="/store/products" className="text-sm font-semibold text-primary hover:text-teal-800 transition-colors hidden sm:block">
@@ -146,7 +146,7 @@ export function StoreHomePage() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary" />
             </div>
           ) : products.length === 0 ? (
-            <div className="flex h-48 items-center justify-center rounded-2xl bg-white ring-1 ring-gray-100">
+            <div className="flex h-48 items-center justify-center rounded-2xl bg-surface ring-1 ring-gray-100">
               <p className="text-sm text-gray-400">Products coming soon.</p>
             </div>
           ) : (
@@ -171,7 +171,7 @@ export function StoreHomePage() {
               </div>
               <Link
                 to="/store/products"
-                className="inline-flex items-center rounded-xl bg-white px-6 py-3 text-sm font-semibold text-gray-900 shadow-lg transition-all duration-200 hover:bg-gray-100"
+                className="inline-flex items-center rounded-xl bg-surface px-6 py-3 text-sm font-semibold text-foreground shadow-lg transition-all duration-200 hover:bg-gray-100"
               >
                 Shop Deals
               </Link>
@@ -182,15 +182,15 @@ export function StoreHomePage() {
         {/* Customer Reviews */}
         <section className="py-10">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">What Our Customers Say</h2>
+            <h2 className="text-2xl font-bold text-foreground">What Our Customers Say</h2>
             <p className="mt-1 text-sm text-gray-500">Trusted by hundreds of happy families</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {reviews.map((review, i) => (
-              <div key={i} className="rounded-2xl bg-white p-5 ring-1 ring-gray-100 shadow-sm">
+              <div key={i} className="rounded-2xl bg-surface p-5 ring-1 ring-gray-100 shadow-sm">
                 <StarRating rating={review.rating} />
                 <p className="mt-3 text-sm text-gray-600 leading-relaxed">{review.text}</p>
-                <p className="mt-3 text-xs font-semibold text-gray-900">{review.name}</p>
+                <p className="mt-3 text-xs font-semibold text-foreground">{review.name}</p>
               </div>
             ))}
           </div>

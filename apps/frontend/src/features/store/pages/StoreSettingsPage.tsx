@@ -85,7 +85,7 @@ export function StoreSettingsPage() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out max-w-3xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Store Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Store Settings</h1>
         <p className="mt-1 text-sm text-gray-500">Configure your store details, photos, and branding.</p>
       </div>
 
@@ -97,8 +97,8 @@ export function StoreSettingsPage() {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Info */}
-        <section className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Basic Information</h2>
+        <section className="rounded-xl bg-surface p-6 shadow-sm ring-1 ring-gray-200 space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Basic Information</h2>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
@@ -106,7 +106,7 @@ export function StoreSettingsPage() {
               type="text"
               value={form.storeName}
               onChange={(e) => setForm((f) => ({ ...f, storeName: e.target.value }))}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
 
@@ -116,7 +116,7 @@ export function StoreSettingsPage() {
               rows={3}
               value={form.storeDescription}
               onChange={(e) => setForm((f) => ({ ...f, storeDescription: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
 
@@ -127,7 +127,7 @@ export function StoreSettingsPage() {
                 type="tel"
                 value={form.phoneNumber}
                 onChange={(e) => setForm((f) => ({ ...f, phoneNumber: e.target.value }))}
-                className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary transition-all"
               />
             </div>
             <div>
@@ -136,7 +136,7 @@ export function StoreSettingsPage() {
                 type="tel"
                 value={form.whatsappNumber}
                 onChange={(e) => setForm((f) => ({ ...f, whatsappNumber: e.target.value }))}
-                className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary transition-all"
               />
             </div>
           </div>
@@ -147,7 +147,7 @@ export function StoreSettingsPage() {
               rows={2}
               value={form.storeAddress}
               onChange={(e) => setForm((f) => ({ ...f, storeAddress: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
 
@@ -157,15 +157,15 @@ export function StoreSettingsPage() {
               type="text"
               value={form.openingHours}
               onChange={(e) => setForm((f) => ({ ...f, openingHours: e.target.value }))}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary transition-all"
               placeholder="e.g. Mon-Sun: 8:00 AM - 10:00 PM"
             />
           </div>
         </section>
 
         {/* Images */}
-        <section className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Photos & Branding</h2>
+        <section className="rounded-xl bg-surface p-6 shadow-sm ring-1 ring-gray-200 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Photos & Branding</h2>
 
           {/* Hero Banner */}
           <div>
@@ -181,7 +181,7 @@ export function StoreSettingsPage() {
                   <div className="flex h-full items-center justify-center text-sm text-gray-400">No banner</div>
                 )}
               </div>
-              <button type="button" onClick={() => heroInputRef.current?.click()} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+              <button type="button" onClick={() => heroInputRef.current?.click()} className="rounded-lg border border-gray-200 bg-surface px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                 {settings?.heroBanner?.url ? 'Change' : 'Upload'}
               </button>
             </div>
@@ -201,7 +201,7 @@ export function StoreSettingsPage() {
                   <div className="flex h-full items-center justify-center text-sm text-gray-400">No photo</div>
                 )}
               </div>
-              <button type="button" onClick={() => storeFrontInputRef.current?.click()} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+              <button type="button" onClick={() => storeFrontInputRef.current?.click()} className="rounded-lg border border-gray-200 bg-surface px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                 {settings?.storeFront?.url ? 'Change' : 'Upload'}
               </button>
             </div>
@@ -221,7 +221,7 @@ export function StoreSettingsPage() {
                   <div className="flex h-full items-center justify-center text-xs text-gray-400">No logo</div>
                 )}
               </div>
-              <button type="button" onClick={() => logoInputRef.current?.click()} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+              <button type="button" onClick={() => logoInputRef.current?.click()} className="rounded-lg border border-gray-200 bg-surface px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                 {settings?.logo?.url ? 'Change' : 'Upload'}
               </button>
             </div>
@@ -253,7 +253,7 @@ export function StoreSettingsPage() {
                 </div>
               ))}
             </div>
-            <button type="button" onClick={() => interiorInputRef.current?.click()} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+            <button type="button" onClick={() => interiorInputRef.current?.click()} className="rounded-lg border border-gray-200 bg-surface px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
               Add Photos
             </button>
           </div>

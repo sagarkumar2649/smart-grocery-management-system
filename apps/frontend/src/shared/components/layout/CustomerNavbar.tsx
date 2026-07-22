@@ -66,7 +66,7 @@ export function CustomerNavbar() {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
+    <header className="sticky top-0 z-30 bg-surface border-b border-border shadow-sm">
       {/* Top bar - desktop */}
       <div className="hidden lg:block bg-gray-900 text-gray-300 text-xs">
         <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-8">
@@ -75,7 +75,7 @@ export function CustomerNavbar() {
               <span>{settingsRes.data.phoneNumber}</span>
             )}
             {settingsRes?.data?.openingHours && (
-              <span className="text-gray-500">{settingsRes.data.openingHours}</span>
+              <span className="text-gray-400">{settingsRes.data.openingHours}</span>
             )}
           </div>
           <div className="flex items-center gap-4">
@@ -98,7 +98,7 @@ export function CustomerNavbar() {
               </div>
             )}
             <div className="hidden sm:block">
-              <span className="block text-base font-bold text-gray-900 leading-tight">{storeName}</span>
+              <span className="block text-base font-bold text-foreground leading-tight">{storeName}</span>
               <span className="block text-[10px] font-medium text-gray-500 uppercase tracking-wider">Grocery & Essentials</span>
             </div>
           </Link>
@@ -112,7 +112,7 @@ export function CustomerNavbar() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search for groceries, essentials..."
-                className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
               />
             </div>
           </form>
@@ -132,7 +132,7 @@ export function CustomerNavbar() {
                     'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                     isActive
                       ? 'bg-primary/10 text-primary'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-foreground',
                   )}
                 >
                   {link.icon && <link.icon className="h-4 w-4" />}
@@ -151,7 +151,7 @@ export function CustomerNavbar() {
                 'relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200',
                 location.pathname === '/store/cart'
                   ? 'bg-primary/10 text-primary'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-foreground',
               )}
               aria-label="Shopping cart"
             >
@@ -168,7 +168,7 @@ export function CustomerNavbar() {
               <div className="h-px w-px bg-gray-200 mx-1" />
               <Link
                 to="/store/profile"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-foreground transition-colors"
               >
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={displayName} className="h-7 w-7 rounded-full object-cover" />
@@ -210,7 +210,7 @@ export function CustomerNavbar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search for groceries..."
-              className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
         </form>
@@ -218,7 +218,7 @@ export function CustomerNavbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t border-gray-100 bg-white lg:hidden">
+        <div className="border-t border-border bg-surface lg:hidden">
           <div className="space-y-1 px-4 py-3">
             {navLinks.map((link) => {
               const isActive =

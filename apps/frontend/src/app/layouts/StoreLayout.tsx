@@ -9,7 +9,7 @@ export function StoreLayout() {
   const storeName = settings?.storeName ?? 'Sagar General Store';
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="min-h-screen bg-background text-foreground">
       <CustomerNavbar />
       <main className="min-h-[60vh]">
         <Outlet />

@@ -45,7 +45,7 @@ export function StoreProductsPage() {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">All Products</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">All Products</h1>
         <p className="mt-1 text-sm text-gray-500">
           {pagination ? `${pagination.total.toLocaleString('en-IN')} products available` : 'Browse our collection'}
         </p>
@@ -59,7 +59,7 @@ export function StoreProductsPage() {
           className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 ${
             filters.category === ''
               ? 'bg-gray-900 text-white shadow-sm'
-              : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300'
+              : 'bg-surface text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300'
           }`}
         >
           All
@@ -72,7 +72,7 @@ export function StoreProductsPage() {
             className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 ${
               filters.category === cat._id
                 ? 'bg-gray-900 text-white shadow-sm'
-                : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300'
+                : 'bg-surface text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300'
             }`}
           >
             {cat.name}
@@ -90,7 +90,7 @@ export function StoreProductsPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search products..."
-              className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              className="h-10 w-full rounded-xl border border-gray-200 bg-surface pl-9 pr-4 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
         </form>
@@ -103,7 +103,7 @@ export function StoreProductsPage() {
             const sortOrder = (parts[1] ?? 'desc') as 'asc' | 'desc';
             handleSort(sortBy, sortOrder);
           }}
-          className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+          className="h-10 rounded-xl border border-gray-200 bg-surface px-3 text-sm text-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
         >
           <option value="createdAt-desc">Newest First</option>
           <option value="createdAt-asc">Oldest First</option>
@@ -120,7 +120,7 @@ export function StoreProductsPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary" />
         </div>
       ) : products.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center rounded-2xl bg-white ring-1 ring-gray-100 gap-3">
+        <div className="flex h-64 flex-col items-center justify-center rounded-2xl bg-surface ring-1 ring-gray-100 gap-3">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           <p className="text-sm text-gray-400">No products found</p>
         </div>
@@ -145,7 +145,7 @@ export function StoreProductsPage() {
                 className={`h-10 min-w-10 rounded-xl px-3 text-sm font-semibold transition-all duration-200 ${
                   pageNum === pagination.page
                     ? 'bg-gray-900 text-white shadow-sm'
-                    : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300'
+                    : 'bg-surface text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300'
                 }`}
               >
                 {pageNum}

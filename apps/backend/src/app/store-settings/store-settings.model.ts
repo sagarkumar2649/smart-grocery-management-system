@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
 export interface IStoreImage {
   url: string;
@@ -12,9 +12,21 @@ export interface IStoreSettings extends Document {
   phoneNumber: string;
   whatsappNumber: string;
   openingHours: string;
+  storeEmail: string;
+  city: string;
+  state: string;
+  pincode: string;
+  gstNumber: string;
+  panNumber: string;
+  currency: string;
+  timezone: string;
+  language: string;
+  tagline: string;
+  brandColor: string;
   logo?: IStoreImage;
   heroBanner?: IStoreImage;
   storeFront?: IStoreImage;
+  favicon?: IStoreImage;
   interiorGallery: IStoreImage[];
   createdAt: Date;
   updatedAt: Date;
@@ -34,32 +46,87 @@ const storeSettingsSchema = new Schema<IStoreSettings>(
       type: String,
       required: true,
       trim: true,
-      default: 'Sagar General Store',
+      default: "Sagar General Store",
     },
     storeDescription: {
       type: String,
       trim: true,
-      default: '',
+      default: "",
     },
     storeAddress: {
       type: String,
       trim: true,
-      default: '',
+      default: "",
     },
     phoneNumber: {
       type: String,
       trim: true,
-      default: '',
+      default: "",
     },
     whatsappNumber: {
       type: String,
       trim: true,
-      default: '',
+      default: "",
     },
     openingHours: {
       type: String,
       trim: true,
-      default: 'Mon-Sun: 8:00 AM - 10:00 PM',
+      default: "Mon-Sun: 8:00 AM - 10:00 PM",
+    },
+    storeEmail: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    city: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    state: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    pincode: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    gstNumber: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    panNumber: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    currency: {
+      type: String,
+      trim: true,
+      default: "INR",
+    },
+    timezone: {
+      type: String,
+      trim: true,
+      default: "Asia/Kolkata",
+    },
+    language: {
+      type: String,
+      trim: true,
+      default: "en",
+    },
+    tagline: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    brandColor: {
+      type: String,
+      trim: true,
+      default: "#0F766E",
     },
     logo: {
       type: storeImageSchema,
@@ -73,6 +140,10 @@ const storeSettingsSchema = new Schema<IStoreSettings>(
       type: storeImageSchema,
       default: undefined,
     },
+    favicon: {
+      type: storeImageSchema,
+      default: undefined,
+    },
     interiorGallery: {
       type: [storeImageSchema],
       default: [],
@@ -82,6 +153,6 @@ const storeSettingsSchema = new Schema<IStoreSettings>(
 );
 
 export const StoreSettings = mongoose.model<IStoreSettings>(
-  'StoreSettings',
+  "StoreSettings",
   storeSettingsSchema,
 );
