@@ -17,6 +17,7 @@ import { StoreCartPage } from '@/features/store/pages/StoreCartPage';
 import { StoreCheckoutPage } from '@/features/store/pages/StoreCheckoutPage';
 import { StoreOrderSuccessPage } from '@/features/store/pages/StoreOrderSuccessPage';
 import { StoreMyOrdersPage } from '@/features/store/pages/StoreMyOrdersPage';
+import { StoreOrderDetailPage } from '@/features/store/pages/StoreOrderDetailPage';
 import { StoreProfilePage } from '@/features/store/pages/StoreProfilePage';
 import { StoreSearchPage } from '@/features/store/pages/StoreSearchPage';
 import { StoreAboutPage } from '@/features/store/pages/StoreAboutPage';
@@ -97,6 +98,7 @@ export const router = createBrowserRouter([
               { path: 'cart', element: <StoreCartPage /> },
               { path: 'checkout', element: <StoreCheckoutPage /> },
               { path: 'orders', element: <StoreMyOrdersPage /> },
+              { path: 'orders/:id', element: <StoreOrderDetailPage /> },
               { path: 'orders/:id/success', element: <StoreOrderSuccessPage /> },
               { path: 'profile', element: <StoreProfilePage /> },
               { path: 'profile/*', element: <StoreProfilePage /> },

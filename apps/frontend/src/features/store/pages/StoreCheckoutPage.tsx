@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { selectCartItems, selectCartTotal, clearCart } from '@/store/slices/cart.slice';
-import { useCreateOrder } from '@/features/store/hooks/use-orders';
+import { useCreateOrder, useUpiInfo } from '@/features/store/hooks/use-orders';
 import { useMyProfile } from '@/features/customers/hooks/use-customers';
 import type { OrderPaymentMethod } from '@/features/store/api/orders-api';
 
@@ -36,6 +36,7 @@ export function StoreCheckoutPage() {
   const cartTotal = useAppSelector(selectCartTotal);
   const { data: profileRes } = useMyProfile();
   const profile = profileRes?.data;
+  const { data: upiInfo } = useUpiInfo();
 
   const createOrderMutation = useCreateOrder();
 
@@ -308,20 +309,14 @@ export function StoreCheckoutPage() {
                   {
                     value: 'upi' as const,
                     label: 'UPI Payment',
-                    desc: 'Google Pay, PhonePe, Paytm, etc.',
-                    available: false,
-                  },
-                  {
-                    value: 'razorpay' as const,
-                    label: 'Online Payment',
-                    desc: 'Credit/Debit Card, Net Banking',
-                    available: false,
+                    desc: upiInfo?.upiId ? `Pay to ${upiInfo.upiId}` : 'Google Pay, PhonePe, Paytm, etc.',
+                    available: !!upiInfo?.upiId,
                   },
                   {
                     value: 'qr' as const,
                     label: 'QR Code',
-                    desc: 'Scan and pay via any UPI app',
-                    available: false,
+                    desc: upiInfo?.upiQrUrl ? 'Scan QR code to pay via any UPI app' : 'Scan and pay via any UPI app',
+                    available: !!upiInfo?.upiQrUrl,
                   },
                 ].map((method) => (
                   <label
@@ -346,7 +341,7 @@ export function StoreCheckoutPage() {
                     <div>
                       <span className="text-sm font-semibold text-foreground">{method.label}</span>
                       <p className="text-xs text-gray-500">
-                        {method.available ? method.desc : 'Coming soon'}
+                        {method.available ? method.desc : 'Not configured yet'}
                       </p>
                     </div>
                   </label>

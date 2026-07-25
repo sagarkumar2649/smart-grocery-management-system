@@ -11,6 +11,9 @@ import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 import { generateInvoicePDF } from "./pdf.service.js";
 import { sendInvoiceEmail } from "./email.service.js";
 
+// NOTE: All MongoDB session/transaction code has been removed.
+// Operations execute sequentially without replica-set requirements.
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const rupeesToPaise = (rupees: number) => Math.round(rupees * 100);
@@ -169,7 +172,7 @@ export async function getProductByBarcode(req: Request, res: Response): Promise<
     .lean();
 
   if (!product) {
-    res.status(404).json(fail("NOT_FOUND", "No active product found with this barcode"));
+    res.status(404).json(fail("No active product found with this barcode", "NOT_FOUND"));
     return;
   }
 
@@ -193,8 +196,12 @@ export async function getProductByBarcode(req: Request, res: Response): Promise<
 export async function checkout(req: Request, res: Response): Promise<void> {
   const parsed = checkoutSchema.safeParse(req.body);
   if (!parsed.success) {
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const messages = Object.entries(fieldErrors)
+      .map(([field, errs]) => `${field}: ${(errs ?? []).join(", ")}`)
+      .join("; ");
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail(messages || "Please check your input", "VALIDATION_ERROR"),
     );
     return;
   }
@@ -204,7 +211,7 @@ export async function checkout(req: Request, res: Response): Promise<void> {
 
   const appUser = await AppUser.findOne({ clerkId }).lean();
   if (!appUser) {
-    res.status(403).json(fail("FORBIDDEN", "User not provisioned"));
+    res.status(403).json(fail("User not provisioned", "FORBIDDEN"));
     return;
   }
 
@@ -279,13 +286,13 @@ export async function checkout(req: Request, res: Response): Promise<void> {
     }).lean();
 
     if (!coupon) {
-      res.status(400).json(fail("VALIDATION_ERROR", "Invalid or inactive coupon code"));
+      res.status(400).json(fail("Invalid or inactive coupon code", "VALIDATION_ERROR"));
       return;
     }
 
     const now = new Date();
     if (now < coupon.validFrom || now > coupon.validUntil) {
-      res.status(400).json(fail("VALIDATION_ERROR", "Coupon has expired or is not yet valid"));
+      res.status(400).json(fail("Coupon has expired or is not yet valid", "VALIDATION_ERROR"));
       return;
     }
 
@@ -293,15 +300,15 @@ export async function checkout(req: Request, res: Response): Promise<void> {
     if (afterItemDiscount < coupon.minOrderAmount) {
       res.status(400).json(
         fail(
-          "VALIDATION_ERROR",
           `Minimum order amount ₹${(coupon.minOrderAmount / 100).toFixed(2)} required for this coupon`,
+          "VALIDATION_ERROR",
         ),
       );
       return;
     }
 
     if (coupon.usageLimit !== undefined && coupon.usedCount >= coupon.usageLimit) {
-      res.status(400).json(fail("VALIDATION_ERROR", "Coupon usage limit reached"));
+      res.status(400).json(fail("Coupon usage limit reached", "VALIDATION_ERROR"));
       return;
     }
 
@@ -320,17 +327,19 @@ export async function checkout(req: Request, res: Response): Promise<void> {
   const grandTotal = subtotal - totalItemDiscount - billDiscount - couponDiscount + totalGST;
 
   if (grandTotal < 0) {
-    res.status(400).json(fail("VALIDATION_ERROR", "Grand total cannot be negative"));
+    res.status(400).json(fail("Grand total cannot be negative", "VALIDATION_ERROR"));
     return;
   }
 
   // Validate payments
+  // Tolerance accounts for rounding differences between frontend (rupees) and backend (paise)
+  // when computing GST: Math.round(price_rupees * gst / 100) vs Math.round(price_paise * gst / 100)
   const totalPaid = data.payments.reduce((sum, p) => sum + rupeesToPaise(p.amount), 0);
-  if (Math.abs(totalPaid - grandTotal) > 1) {
+  if (Math.abs(totalPaid - grandTotal) > 10) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         `Payment amount ₹${(totalPaid / 100).toFixed(2)} does not match grand total ₹${(grandTotal / 100).toFixed(2)}`,
+        "VALIDATION_ERROR",
       ),
     );
     return;
@@ -347,19 +356,15 @@ export async function checkout(req: Request, res: Response): Promise<void> {
 
   const paymentStatus = totalPaid >= grandTotal ? "paid" : "partial";
 
-  // Execute transaction
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const invoiceNumber = await generateInvoiceNumber();
 
-    // Reduce stock for each product
+    // Reduce stock for each product (no transaction — sequential)
     for (const item of invoiceItems) {
       const product = await Product.findByIdAndUpdate(
         item.product,
         { $inc: { stock: -item.quantity } },
-        { new: true, session },
+        { new: true },
       );
 
       if (!product) {
@@ -370,22 +375,17 @@ export async function checkout(req: Request, res: Response): Promise<void> {
         throw new Error(`Insufficient stock for "${item.name}" after concurrent update`);
       }
 
-      await StockMovement.create(
-        [
-          {
-            product: item.product,
-            type: "sale",
-            quantity: -item.quantity,
-            previousStock: product.stock + item.quantity,
-            newStock: product.stock,
-            reference: invoiceNumber,
-            unitCost: item.unitPrice,
-            notes: `POS Sale - ${invoiceNumber}`,
-            createdBy: appUser.name,
-          },
-        ],
-        { session },
-      );
+      await StockMovement.create({
+        product: item.product,
+        type: "sale",
+        quantity: -item.quantity,
+        previousStock: product.stock + item.quantity,
+        newStock: product.stock,
+        reference: invoiceNumber,
+        unitCost: item.unitPrice,
+        notes: `POS Sale - ${invoiceNumber}`,
+        createdBy: appUser.name,
+      });
     }
 
     // Increment coupon usage
@@ -393,45 +393,34 @@ export async function checkout(req: Request, res: Response): Promise<void> {
       await Coupon.findOneAndUpdate(
         { code: couponCode },
         { $inc: { usedCount: 1 } },
-        { session },
       );
     }
 
-    const [invoice] = await Invoice.create(
-      [
-        {
-          invoiceNumber,
-          items: invoiceItems,
-          subtotal,
-          totalItemDiscount: totalItemDiscount + billDiscount,
-          couponCode,
-          couponDiscount,
-          totalGST,
-          gstBreakdown: { cgst: cgstTotal, sgst: sgstTotal, igst: 0 },
-          grandTotal,
-          payments,
-          paymentStatus,
-          customerName: data.customerName,
-          customerPhone: data.customerPhone,
-          customerEmail: data.customerEmail,
-          cashierName: appUser.name,
-          createdBy: appUser._id,
-          status: "completed",
-          notes: data.notes,
-        },
-      ],
-      { session },
-    );
+    const invoice = await Invoice.create({
+      invoiceNumber,
+      items: invoiceItems,
+      subtotal,
+      totalItemDiscount: totalItemDiscount + billDiscount,
+      couponCode,
+      couponDiscount,
+      totalGST,
+      gstBreakdown: { cgst: cgstTotal, sgst: sgstTotal, igst: 0 },
+      grandTotal,
+      payments,
+      paymentStatus,
+      customerName: data.customerName,
+      customerPhone: data.customerPhone,
+      customerEmail: data.customerEmail,
+      cashierName: appUser.name,
+      createdBy: appUser._id,
+      status: "completed",
+      notes: data.notes,
+    });
 
-    await session.commitTransaction();
-
-    res.status(201).json(ok(formatInvoice(invoice!)));
+    res.status(201).json(ok(formatInvoice(invoice)));
   } catch (err) {
-    await session.abortTransaction();
     const message = err instanceof Error ? err.message : "Checkout failed";
-    res.status(400).json(fail("VALIDATION_ERROR", message));
-  } finally {
-    session.endSession();
+    res.status(400).json(fail(message, "CHECKOUT_ERROR"));
   }
 }
 
@@ -538,33 +527,25 @@ export async function voidInvoice(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // Restore stock
     for (const item of invoice.items) {
       const product = await Product.findByIdAndUpdate(
         item.product,
         { $inc: { stock: item.quantity } },
-        { new: true, session },
+        { new: true },
       );
 
       if (product) {
-        await StockMovement.create(
-          [
-            {
-              product: item.product,
-              type: "return",
-              quantity: item.quantity,
-              previousStock: product.stock - item.quantity,
-              newStock: product.stock,
-              reference: invoice.invoiceNumber,
-              notes: `Void - ${invoice.invoiceNumber}: ${parsed.data.reason}`,
-            },
-          ],
-          { session },
-        );
+        await StockMovement.create({
+          product: item.product,
+          type: "return",
+          quantity: item.quantity,
+          previousStock: product.stock - item.quantity,
+          newStock: product.stock,
+          reference: invoice.invoiceNumber,
+          notes: `Void - ${invoice.invoiceNumber}: ${parsed.data.reason}`,
+        });
       }
     }
 
@@ -573,23 +554,17 @@ export async function voidInvoice(req: Request, res: Response): Promise<void> {
       await Coupon.findOneAndUpdate(
         { code: invoice.couponCode },
         { $inc: { usedCount: -1 } },
-        { session },
       );
     }
 
     invoice.status = "voided";
     invoice.voidReason = parsed.data.reason;
-    await invoice.save({ session });
-
-    await session.commitTransaction();
+    await invoice.save();
 
     res.status(200).json(ok(formatInvoice(invoice)));
   } catch (err) {
-    await session.abortTransaction();
     const message = err instanceof Error ? err.message : "Void failed";
-    res.status(500).json(fail("INTERNAL_ERROR", message));
-  } finally {
-    session.endSession();
+    res.status(500).json(fail(message, "INTERNAL_ERROR"));
   }
 }
 

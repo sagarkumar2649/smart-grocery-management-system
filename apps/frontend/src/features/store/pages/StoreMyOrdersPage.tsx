@@ -213,10 +213,16 @@ export function StoreMyOrdersPage() {
                       order.paymentStatus === 'pending' ? 'bg-amber-50 text-amber-600' :
                       'bg-red-50 text-red-600'
                     }`}>
-                      {order.paymentStatus === 'cod' ? 'COD' : order.paymentMethod === 'cod' ? 'COD' : order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                      {order.paymentMethod === 'cod' ? 'COD' : order.paymentStatus === 'pending_verification' ? 'Pending Verification' : order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Link
+                      to={`/store/orders/${order._id}`}
+                      className="text-xs font-medium text-primary hover:text-teal-800 transition-colors"
+                    >
+                      View Details
+                    </Link>
                     {['placed', 'confirmed'].includes(order.orderStatus) && (
                       <button
                         type="button"

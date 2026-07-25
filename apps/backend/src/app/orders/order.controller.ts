@@ -10,6 +10,9 @@ import { ok, fail } from "../response/api-response.js";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 import { logger } from "../../core/logging/logger.js";
 
+// NOTE: All MongoDB session/transaction code has been removed.
+// Operations execute sequentially without replica-set requirements.
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const rupeesToPaise = (rupees: number) => Math.round(rupees * 100);
@@ -37,21 +40,26 @@ async function generateOrderId(): Promise<string> {
 }
 
 function formatOrder(doc: IOrder) {
-  const obj = doc.toObject();
+  const obj = (typeof (doc as unknown as Record<string, unknown>).toObject === "function"
+    ? (doc as unknown as { toObject(): Record<string, unknown> }).toObject()
+    : (doc as unknown as Record<string, unknown>)) as Record<string, unknown>;
+
+  const items = (obj.items as Array<Record<string, unknown>>).map((item) => ({
+    ...item,
+    unitPrice: paiseToRupees(item.unitPrice as number),
+    mrp: paiseToRupees(item.mrp as number),
+    gstAmount: paiseToRupees(item.gstAmount as number),
+    total: paiseToRupees(item.total as number),
+  }));
+
   return {
     ...obj,
-    subtotal: paiseToRupees(obj.subtotal),
-    totalGST: paiseToRupees(obj.totalGST),
-    deliveryCharges: paiseToRupees(obj.deliveryCharges),
-    discount: paiseToRupees(obj.discount),
-    grandTotal: paiseToRupees(obj.grandTotal),
-    items: obj.items.map((item: (typeof obj.items)[number]) => ({
-      ...item,
-      unitPrice: paiseToRupees(item.unitPrice),
-      mrp: paiseToRupees(item.mrp),
-      gstAmount: paiseToRupees(item.gstAmount),
-      total: paiseToRupees(item.total),
-    })),
+    subtotal: paiseToRupees(obj.subtotal as number),
+    totalGST: paiseToRupees(obj.totalGST as number),
+    deliveryCharges: paiseToRupees(obj.deliveryCharges as number),
+    discount: paiseToRupees(obj.discount as number),
+    grandTotal: paiseToRupees(obj.grandTotal as number),
+    items,
   };
 }
 
@@ -176,19 +184,15 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Execute transaction
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const orderId = await generateOrderId();
 
-    // Reduce stock for each product
+    // Reduce stock for each product (no transaction — sequential)
     for (const item of orderItems) {
       const product = await Product.findByIdAndUpdate(
         item.product,
         { $inc: { stock: -item.quantity } },
-        { new: true, session },
+        { new: true },
       );
 
       if (!product) {
@@ -199,50 +203,40 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
         throw new Error(`Another customer just bought "${item.name}". Only ${product.stock + item.quantity} were available.`);
       }
 
-      await StockMovement.create(
-        [
-          {
-            product: item.product,
-            type: "sale",
-            quantity: -item.quantity,
-            previousStock: product.stock + item.quantity,
-            newStock: product.stock,
-            reference: orderId,
-            unitCost: item.unitPrice,
-            notes: `Online Order - ${orderId}`,
-            createdBy: appUser.name,
-          },
-        ],
-        { session },
-      );
+      await StockMovement.create({
+        product: item.product,
+        type: "sale",
+        quantity: -item.quantity,
+        previousStock: product.stock + item.quantity,
+        newStock: product.stock,
+        reference: orderId,
+        unitCost: item.unitPrice,
+        notes: `Online Order - ${orderId}`,
+        createdBy: appUser.name,
+      });
     }
 
     const paymentStatus = data.paymentMethod === "cod" ? "pending" : "pending_verification";
 
-    const [order] = await Order.create(
-      [
-        {
-          orderId,
-          customer: appUser._id,
-          clerkId,
-          customerName: data.customerName,
-          customerPhone: data.customerPhone,
-          customerEmail: data.customerEmail,
-          shippingAddress: data.shippingAddress,
-          items: orderItems,
-          subtotal,
-          totalGST,
-          deliveryCharges,
-          discount,
-          grandTotal,
-          paymentMethod: data.paymentMethod,
-          paymentStatus,
-          orderStatus: "placed",
-          notes: data.notes,
-        },
-      ],
-      { session },
-    );
+    const order = await Order.create({
+      orderId,
+      customer: appUser._id,
+      clerkId,
+      customerName: data.customerName,
+      customerPhone: data.customerPhone,
+      customerEmail: data.customerEmail,
+      shippingAddress: data.shippingAddress,
+      items: orderItems,
+      subtotal,
+      totalGST,
+      deliveryCharges,
+      discount,
+      grandTotal,
+      paymentMethod: data.paymentMethod,
+      paymentStatus,
+      orderStatus: "placed",
+      notes: data.notes,
+    });
 
     // Update customer profile stats
     await CustomerProfile.findOneAndUpdate(
@@ -253,19 +247,13 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
           totalSpending: grandTotal / 100,
         },
       },
-      { session },
     );
 
-    await session.commitTransaction();
-
-    res.status(201).json(ok(formatOrder(order!)));
+    res.status(201).json(ok(formatOrder(order)));
   } catch (err) {
-    await session.abortTransaction();
     const message = err instanceof Error ? err.message : "Order creation failed. Please try again.";
     logger.error({ err }, "Order creation failed");
     res.status(400).json(fail(message, "ORDER_ERROR"));
-  } finally {
-    session.endSession();
   }
 }
 
@@ -346,40 +334,32 @@ export async function cancelMyOrder(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // Restore stock
     for (const item of order.items) {
       const product = await Product.findByIdAndUpdate(
         item.product,
         { $inc: { stock: item.quantity } },
-        { new: true, session },
+        { new: true },
       );
 
       if (product) {
-        await StockMovement.create(
-          [
-            {
-              product: item.product,
-              type: "return",
-              quantity: item.quantity,
-              previousStock: product.stock - item.quantity,
-              newStock: product.stock,
-              reference: order.orderId,
-              notes: `Order cancelled - ${order.orderId}: ${parsed.data.reason}`,
-            },
-          ],
-          { session },
-        );
+        await StockMovement.create({
+          product: item.product,
+          type: "return",
+          quantity: item.quantity,
+          previousStock: product.stock - item.quantity,
+          newStock: product.stock,
+          reference: order.orderId,
+          notes: `Order cancelled - ${order.orderId}: ${parsed.data.reason}`,
+        });
       }
     }
 
     order.orderStatus = "cancelled";
     order.cancelReason = parsed.data.reason;
     order.paymentStatus = order.paymentMethod === "cod" ? "pending" : "refunded";
-    await order.save({ session });
+    await order.save();
 
     // Update customer stats
     await CustomerProfile.findOneAndUpdate(
@@ -390,19 +370,13 @@ export async function cancelMyOrder(req: Request, res: Response): Promise<void> 
           totalSpending: -(order.grandTotal / 100),
         },
       },
-      { session },
     );
-
-    await session.commitTransaction();
 
     res.status(200).json(ok(formatOrder(order)));
   } catch (err) {
-    await session.abortTransaction();
     const message = err instanceof Error ? err.message : "Failed to cancel order";
     logger.error({ err }, "Order cancellation failed");
     res.status(500).json(fail(message, "INTERNAL_ERROR"));
-  } finally {
-    session.endSession();
   }
 }
 
@@ -506,9 +480,6 @@ export async function updateOrderStatus(req: Request, res: Response): Promise<vo
     return;
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // If cancelling, restore stock
     if (parsed.data.orderStatus === "cancelled") {
@@ -516,25 +487,20 @@ export async function updateOrderStatus(req: Request, res: Response): Promise<vo
         const product = await Product.findByIdAndUpdate(
           item.product,
           { $inc: { stock: item.quantity } },
-          { new: true, session },
+          { new: true },
         );
 
         if (product) {
-          await StockMovement.create(
-            [
-              {
-                product: item.product,
-                type: "return",
-                quantity: item.quantity,
-                previousStock: product.stock - item.quantity,
-                newStock: product.stock,
-                reference: order.orderId,
-                notes: `Order cancelled by admin - ${order.orderId}: ${parsed.data.cancelReason ?? "No reason"}`,
-                createdBy: "Admin",
-              },
-            ],
-            { session },
-          );
+          await StockMovement.create({
+            product: item.product,
+            type: "return",
+            quantity: item.quantity,
+            previousStock: product.stock - item.quantity,
+            newStock: product.stock,
+            reference: order.orderId,
+            notes: `Order cancelled by admin - ${order.orderId}: ${parsed.data.cancelReason ?? "No reason"}`,
+            createdBy: "Admin",
+          });
         }
       }
 
@@ -548,7 +514,6 @@ export async function updateOrderStatus(req: Request, res: Response): Promise<vo
               totalSpending: -(order.grandTotal / 100),
             },
           },
-          { session },
         );
       }
 
@@ -568,17 +533,13 @@ export async function updateOrderStatus(req: Request, res: Response): Promise<vo
       order.cancelReason = parsed.data.cancelReason;
     }
 
-    await order.save({ session });
-    await session.commitTransaction();
+    await order.save();
 
     res.status(200).json(ok(formatOrder(order)));
   } catch (err) {
-    await session.abortTransaction();
     const message = err instanceof Error ? err.message : "Failed to update order status";
     logger.error({ err }, "Order status update failed");
     res.status(500).json(fail(message, "INTERNAL_ERROR"));
-  } finally {
-    session.endSession();
   }
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAllOrders, useOrderDetail, useUpdateOrderStatus, useOrderStats } from '@/features/store/hooks/use-orders';
+import { useAllOrders, useOrderDetail, useUpdateOrderStatus, useVerifyPayment, useOrderStats } from '@/features/store/hooks/use-orders';
 import { formatINRCompact } from '@/shared/lib/format-currency';
 import type { OrderStatus } from '@/features/store/api/orders-api';
 
@@ -14,6 +14,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 
 const PAYMENT_COLORS: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
+  pending_verification: 'bg-orange-100 text-orange-700',
   paid: 'bg-green-100 text-green-700',
   failed: 'bg-red-100 text-red-700',
   refunded: 'bg-gray-100 text-gray-700',
@@ -52,10 +53,11 @@ export function OrdersPage() {
 
   const { data: selectedOrder } = useOrderDetail(selectedId ?? '');
   const updateStatus = useUpdateOrderStatus();
+  const verifyPayment = useVerifyPayment();
 
   const orders = data?.data ?? [];
   const pagination = data?.meta?.pagination;
-  const stats = statsRes?.data;
+  const stats = statsRes;
 
   const handleStatusUpdate = () => {
     if (!selectedId || !statusDraft) return;
@@ -130,6 +132,7 @@ export function OrdersPage() {
         >
           <option value="">All Payments</option>
           <option value="pending">Pending</option>
+          <option value="pending_verification">Pending Verification</option>
           <option value="paid">Paid</option>
           <option value="failed">Failed</option>
           <option value="refunded">Refunded</option>
@@ -207,7 +210,8 @@ export function OrdersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${PAYMENT_COLORS[order.paymentStatus]}`}>
-                      {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                      {order.paymentStatus === 'pending_verification' ? 'Pending Verification' :
+                       order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
@@ -305,9 +309,34 @@ export function OrdersPage() {
                 </p>
                 <p className="text-sm text-gray-600">
                   Status: <span className={`font-medium ${PAYMENT_COLORS[selectedOrder.paymentStatus]?.replace('bg-', 'text-').replace('100', '700') ?? ''}`}>
-                    {selectedOrder.paymentStatus.charAt(0).toUpperCase() + selectedOrder.paymentStatus.slice(1)}
+                    {selectedOrder.paymentStatus === 'pending_verification' ? 'Pending Verification' :
+                     selectedOrder.paymentStatus.charAt(0).toUpperCase() + selectedOrder.paymentStatus.slice(1)}
                   </span>
                 </p>
+                {selectedOrder.paymentStatus === 'pending_verification' && (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => verifyPayment.mutate(
+                        { id: selectedOrder._id, action: 'approve' },
+                      )}
+                      disabled={verifyPayment.isPending}
+                      className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {verifyPayment.isPending ? 'Processing...' : 'Approve Payment'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => verifyPayment.mutate(
+                        { id: selectedOrder._id, action: 'reject' },
+                      )}
+                      disabled={verifyPayment.isPending}
+                      className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {verifyPayment.isPending ? 'Processing...' : 'Reject Payment'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

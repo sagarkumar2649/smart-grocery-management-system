@@ -137,7 +137,7 @@ export function useUpdateOrderStatus() {
       id: string;
       orderStatus: OrderStatus;
       cancelReason?: string;
-    }) => updateOrderStatus(id, { orderStatus, cancelReason }, getToken).then((res) => res.data),
+    }) => updateOrderStatus(id, { orderStatus, ...(cancelReason !== undefined ? { cancelReason } : {}) }, getToken).then((res) => res.data),
     onSuccess: (_data, { id }) => {
       void qc.invalidateQueries({ queryKey: orderKeys.admin() });
       void qc.invalidateQueries({ queryKey: orderKeys.adminDetail(id) });
@@ -184,7 +184,7 @@ export function useVerifyPayment() {
       id: string;
       action: "approve" | "reject";
       reason?: string;
-    }) => verifyPayment(id, { action, reason }, getToken).then((res) => res.data),
+    }) => verifyPayment(id, { action, ...(reason !== undefined ? { reason } : {}) }, getToken).then((res) => res.data),
     onSuccess: (_data, { id }) => {
       void qc.invalidateQueries({ queryKey: orderKeys.admin() });
       void qc.invalidateQueries({ queryKey: orderKeys.adminDetail(id) });
