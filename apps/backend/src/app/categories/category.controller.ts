@@ -29,7 +29,7 @@ export async function listCategories(_req: Request, res: Response): Promise<void
 export async function createCategory(req: Request, res: Response): Promise<void> {
   const parsed = categoryBodySchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json(fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>));
+    res.status(400).json(fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>));
     return;
   }
 
@@ -38,7 +38,7 @@ export async function createCategory(req: Request, res: Response): Promise<void>
 
   const existing = await Category.findOne({ slug });
   if (existing) {
-    res.status(409).json(fail("CONFLICT", `Category "${name}" already exists`));
+    res.status(409).json(fail(`Category "${name}" already exists`, "CONFLICT"));
     return;
   }
 
@@ -50,7 +50,7 @@ export async function updateCategory(req: Request, res: Response): Promise<void>
   const { id } = req.params as { id: string };
   const parsed = categoryBodySchema.partial().safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json(fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>));
+    res.status(400).json(fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>));
     return;
   }
 
@@ -61,7 +61,7 @@ export async function updateCategory(req: Request, res: Response): Promise<void>
 
   const category = await Category.findByIdAndUpdate(id, update, { new: true, runValidators: true });
   if (!category) {
-    res.status(404).json(fail("NOT_FOUND", "Category not found"));
+    res.status(404).json(fail("Category not found", "NOT_FOUND"));
     return;
   }
 
@@ -72,7 +72,7 @@ export async function deleteCategory(req: Request, res: Response): Promise<void>
   const { id } = req.params as { id: string };
   const category = await Category.findByIdAndDelete(id);
   if (!category) {
-    res.status(404).json(fail("NOT_FOUND", "Category not found"));
+    res.status(404).json(fail("Category not found", "NOT_FOUND"));
     return;
   }
   res.status(200).json(ok({ message: "Category deleted" }));

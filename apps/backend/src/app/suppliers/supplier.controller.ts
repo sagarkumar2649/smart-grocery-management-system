@@ -170,7 +170,7 @@ export async function getSupplier(req: Request, res: Response): Promise<void> {
   const { id } = req.params as { id: string };
   const supplier = await Supplier.findById(id).lean();
   if (!supplier) {
-    res.status(404).json(fail("NOT_FOUND", "Supplier not found"));
+    res.status(404).json(fail("Supplier not found", "NOT_FOUND"));
     return;
   }
 
@@ -193,8 +193,8 @@ export async function createSupplier(req: Request, res: Response): Promise<void>
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -205,7 +205,7 @@ export async function createSupplier(req: Request, res: Response): Promise<void>
   if (parsed.data.gstNumber) {
     const exists = await Supplier.exists({ gstNumber: parsed.data.gstNumber });
     if (exists) {
-      res.status(409).json(fail("CONFLICT", "GST number already registered"));
+      res.status(409).json(fail("GST number already registered", "CONFLICT"));
       return;
     }
   }
@@ -213,7 +213,7 @@ export async function createSupplier(req: Request, res: Response): Promise<void>
   // Check email uniqueness
   const emailExists = await Supplier.exists({ email: parsed.data.email });
   if (emailExists) {
-    res.status(409).json(fail("CONFLICT", "Email already registered"));
+    res.status(409).json(fail("Email already registered", "CONFLICT"));
     return;
   }
 
@@ -227,8 +227,8 @@ export async function updateSupplier(req: Request, res: Response): Promise<void>
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -237,7 +237,7 @@ export async function updateSupplier(req: Request, res: Response): Promise<void>
 
   const existing = await Supplier.findById(id);
   if (!existing) {
-    res.status(404).json(fail("NOT_FOUND", "Supplier not found"));
+    res.status(404).json(fail("Supplier not found", "NOT_FOUND"));
     return;
   }
 
@@ -248,7 +248,7 @@ export async function updateSupplier(req: Request, res: Response): Promise<void>
       _id: { $ne: id },
     });
     if (gstExists) {
-      res.status(409).json(fail("CONFLICT", "GST number already registered"));
+      res.status(409).json(fail("GST number already registered", "CONFLICT"));
       return;
     }
   }
@@ -260,7 +260,7 @@ export async function updateSupplier(req: Request, res: Response): Promise<void>
       _id: { $ne: id },
     });
     if (emailExists) {
-      res.status(409).json(fail("CONFLICT", "Email already registered"));
+      res.status(409).json(fail("Email already registered", "CONFLICT"));
       return;
     }
   }
@@ -282,8 +282,8 @@ export async function updateSupplierStatus(
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -297,7 +297,7 @@ export async function updateSupplierStatus(
   ).lean();
 
   if (!supplier) {
-    res.status(404).json(fail("NOT_FOUND", "Supplier not found"));
+    res.status(404).json(fail("Supplier not found", "NOT_FOUND"));
     return;
   }
 
@@ -314,14 +314,14 @@ export async function deleteSupplier(req: Request, res: Response): Promise<void>
   });
   if (activePOs) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Cannot delete supplier with active purchase orders"),
+      fail("Cannot delete supplier with active purchase orders", "VALIDATION_ERROR"),
     );
     return;
   }
 
   const supplier = await Supplier.findByIdAndDelete(id);
   if (!supplier) {
-    res.status(404).json(fail("NOT_FOUND", "Supplier not found"));
+    res.status(404).json(fail("Supplier not found", "NOT_FOUND"));
     return;
   }
 
@@ -398,7 +398,7 @@ export async function getPurchaseOrder(
     .lean();
 
   if (!order) {
-    res.status(404).json(fail("NOT_FOUND", "Purchase order not found"));
+    res.status(404).json(fail("Purchase order not found", "NOT_FOUND"));
     return;
   }
 
@@ -413,8 +413,8 @@ export async function createPurchaseOrder(
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -423,14 +423,14 @@ export async function createPurchaseOrder(
 
   const clerkId = (req as AuthenticatedRequest).auth?.userId;
   if (!clerkId) {
-    res.status(401).json(fail("UNAUTHORIZED", "Not authenticated"));
+    res.status(401).json(fail("Not authenticated", "UNAUTHORIZED"));
     return;
   }
 
   // Validate supplier exists
   const supplier = await Supplier.findById(parsed.data.supplier);
   if (!supplier) {
-    res.status(400).json(fail("VALIDATION_ERROR", "Supplier not found"));
+    res.status(400).json(fail("Supplier not found", "VALIDATION_ERROR"));
     return;
   }
 
@@ -494,8 +494,8 @@ export async function updatePOStatus(
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -504,7 +504,7 @@ export async function updatePOStatus(
 
   const order = await PurchaseOrder.findById(id);
   if (!order) {
-    res.status(404).json(fail("NOT_FOUND", "Purchase order not found"));
+    res.status(404).json(fail("Purchase order not found", "NOT_FOUND"));
     return;
   }
 
@@ -556,8 +556,8 @@ export async function addPayment(
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -566,13 +566,13 @@ export async function addPayment(
 
   const clerkId = (req as AuthenticatedRequest).auth?.userId;
   if (!clerkId) {
-    res.status(401).json(fail("UNAUTHORIZED", "Not authenticated"));
+    res.status(401).json(fail("Not authenticated", "UNAUTHORIZED"));
     return;
   }
 
   const order = await PurchaseOrder.findById(id);
   if (!order) {
-    res.status(404).json(fail("NOT_FOUND", "Purchase order not found"));
+    res.status(404).json(fail("Purchase order not found", "NOT_FOUND"));
     return;
   }
 
@@ -580,7 +580,7 @@ export async function addPayment(
 
   if (amountPaise > order.remainingBalance) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Payment amount exceeds remaining balance"),
+      fail("Payment amount exceeds remaining balance", "VALIDATION_ERROR"),
     );
     return;
   }

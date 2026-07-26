@@ -6,7 +6,7 @@ import { useStoreSettings } from '@/features/store/hooks/use-store-settings';
 export function StoreLayout() {
   const { data: settingsRes } = useStoreSettings();
   const settings = settingsRes?.data;
-  const storeName = settings?.storeName ?? 'Sagar General Store';
+  const storeName = settings?.storeName ?? '';
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -27,16 +27,16 @@ export function StoreLayout() {
                   <img src={settings.logo.url} alt={storeName} className="h-10 w-10 rounded-lg object-cover" />
                 ) : (
                   <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                    <span className="text-sm font-bold text-white">SS</span>
+                    <span className="text-sm font-bold text-white">{storeName?.charAt(0) ?? 'S'}</span>
                   </div>
                 )}
                 <div>
                   <span className="block text-base font-bold text-white leading-tight">{storeName}</span>
-                  <span className="block text-[10px] font-medium text-gray-500 uppercase tracking-wider">Grocery & Essentials</span>
+                  <span className="block text-[10px] font-medium text-gray-500 uppercase tracking-wider">{settings?.storeDescription ? '' : ''}</span>
                 </div>
               </div>
               <p className="text-sm text-gray-400 leading-relaxed max-w-xs">
-                {settings?.storeDescription || 'Your trusted neighbourhood grocery store for fresh produce and daily essentials.'}
+                {settings?.storeDescription || ''}
               </p>
             </div>
 
@@ -101,7 +101,7 @@ export function StoreLayout() {
                 &copy; {new Date().getFullYear()} {storeName}. All rights reserved.
               </p>
               <p className="text-xs text-gray-600">
-                Fresh Grocery &bull; Daily Essentials &bull; Fast Service
+                {storeName}
               </p>
             </div>
           </div>

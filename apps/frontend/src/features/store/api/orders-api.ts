@@ -8,9 +8,17 @@ export type OrderStatus =
   | "placed"
   | "confirmed"
   | "processing"
+  | "packed"
   | "shipped"
+  | "out_for_delivery"
   | "delivered"
   | "cancelled";
+
+export interface StatusHistoryEntry {
+  status: string;
+  timestamp: string;
+  note?: string;
+}
 
 export interface OrderAddress {
   line1: string;
@@ -56,6 +64,11 @@ export interface Order {
   razorpayPaymentId?: string;
   notes?: string;
   cancelReason?: string;
+  trackingNumber?: string;
+  deliveryPartner?: string;
+  estimatedDeliveryDate?: string;
+  internalNotes?: string;
+  statusHistory: StatusHistoryEntry[];
   deliveredAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -170,11 +183,25 @@ export async function fetchOrderDetail(
 
 export async function updateOrderStatus(
   id: string,
-  data: { orderStatus: OrderStatus; cancelReason?: string },
+  data: { orderStatus: OrderStatus; cancelReason?: string; note?: string },
   getToken: GetToken,
 ): Promise<ApiResponse<Order>> {
   const client = createAuthedClient(getToken);
   return client.patch<ApiResponse<Order>>(`/orders/${id}/status`, data);
+}
+
+export async function updateAdminInfo(
+  id: string,
+  data: {
+    trackingNumber?: string;
+    deliveryPartner?: string;
+    estimatedDeliveryDate?: string;
+    internalNotes?: string;
+  },
+  getToken: GetToken,
+): Promise<ApiResponse<Order>> {
+  const client = createAuthedClient(getToken);
+  return client.patch<ApiResponse<Order>>(`/orders/${id}/admin-info`, data);
 }
 
 export async function fetchOrderStats(

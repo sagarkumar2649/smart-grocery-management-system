@@ -141,21 +141,27 @@ export const selectPOSSubtotal = (state: RootState) =>
 
 export const selectPOSTotalItemDiscount = (state: RootState) =>
   state.pos.items.reduce((sum, i) => {
+    const unitPricePaise = Math.round(i.unitPrice * 100);
+    const lineBeforeDiscountPaise = unitPricePaise * i.quantity;
     if (i.discountType === 'percentage') {
-      return sum + Math.round((i.unitPrice * i.quantity * i.discount) / 100);
+      const discountPaise = Math.round((lineBeforeDiscountPaise * i.discount) / 100);
+      return sum + discountPaise / 100;
     }
-    return sum + i.discount * i.quantity;
+    const discountPaise = Math.round(i.discount * 100) * i.quantity;
+    return sum + discountPaise / 100;
   }, 0);
 
 export const selectPOSTotalGST = (state: RootState) =>
   state.pos.items.reduce((sum, i) => {
-    const lineBeforeDiscount = i.unitPrice * i.quantity;
-    const itemDiscount =
+    const unitPricePaise = Math.round(i.unitPrice * 100);
+    const lineBeforeDiscountPaise = unitPricePaise * i.quantity;
+    const itemDiscountPaise =
       i.discountType === 'percentage'
-        ? Math.round((lineBeforeDiscount * i.discount) / 100)
-        : i.discount * i.quantity;
-    const taxable = lineBeforeDiscount - itemDiscount;
-    return sum + Math.round(taxable * (i.gstPercent / 100));
+        ? Math.round((lineBeforeDiscountPaise * i.discount) / 100)
+        : Math.round(i.discount * 100) * i.quantity;
+    const taxablePaise = lineBeforeDiscountPaise - itemDiscountPaise;
+    const gstPaise = Math.round(taxablePaise * (i.gstPercent / 100));
+    return sum + gstPaise / 100;
   }, 0);
 
 export const selectPOSBillDiscount = (state: RootState) => {

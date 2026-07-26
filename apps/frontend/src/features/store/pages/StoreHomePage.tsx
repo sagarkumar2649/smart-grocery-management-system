@@ -3,29 +3,12 @@ import { useProducts, useCategories } from '@/features/products/hooks/use-produc
 import { useStoreSettings } from '@/features/store/hooks/use-store-settings';
 import { ProductCard } from '@/features/store/components/ProductCard';
 
-const reviews = [
-  { name: 'Priya S.', text: 'Always fresh products and quick delivery. My go-to store for daily groceries!', rating: 5 },
-  { name: 'Rahul M.', text: 'Great prices on fresh vegetables. The quality is consistently excellent.', rating: 5 },
-  { name: 'Anita K.', text: 'Love shopping here! The store is well-organized and staff is very helpful.', rating: 4 },
-  { name: 'Vikram D.', text: 'Best general store in the area. They have everything I need under one roof.', rating: 5 },
-];
-
 const features = [
   { title: 'Fresh Products', desc: 'Handpicked daily for maximum freshness', icon: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25' },
   { title: 'Fast Delivery', desc: 'Get your orders delivered to your doorstep', icon: 'M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21M3.375 14.25h3.75L12 6.75l4.875 7.5h3.75' },
   { title: 'Best Prices', desc: 'Competitive prices on all daily essentials', icon: 'M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
   { title: 'Quality Assured', desc: 'Every product checked for quality before stocking', icon: 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z' },
 ];
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: 5 }, (_, i) => (
-        <svg key={i} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={i < rating ? '#D97706' : 'none'} stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      ))}
-    </div>
-  );
-}
 
 export function StoreHomePage() {
   const { data: productsRes, isLoading: productsLoading } = useProducts({ page: 1, limit: 8, sortBy: 'createdAt', sortOrder: 'desc', status: 'active' });
@@ -35,7 +18,7 @@ export function StoreHomePage() {
   const products = productsRes?.data ?? [];
   const categories = categoriesRes?.data ?? [];
   const settings = settingsRes?.data;
-  const storeName = settings?.storeName ?? 'Sagar General Store';
+  const storeName = settings?.storeName ?? '';
 
   return (
     <div className="animate-in fade-in duration-500">
@@ -52,16 +35,13 @@ export function StoreHomePage() {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm mb-6">
               <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-              Open Now &bull; {settings?.openingHours || 'Mon-Sun: 8AM - 10PM'}
+              Open Now &bull;               {settings?.openingHours || ''}
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl leading-[1.1]">
               {storeName}
             </h1>
             <p className="mt-4 text-lg text-gray-300 sm:text-xl max-w-lg leading-relaxed">
-              Fresh Grocery &bull; Daily Essentials &bull; Fast Service
-            </p>
-            <p className="mt-3 text-sm text-gray-400 max-w-md">
-              {settings?.storeDescription || 'Your trusted neighbourhood grocery store. Quality products at honest prices, delivered with a smile.'}
+              {settings?.storeDescription || ''}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -147,7 +127,7 @@ export function StoreHomePage() {
             </div>
           ) : products.length === 0 ? (
             <div className="flex h-48 items-center justify-center rounded-2xl bg-surface ring-1 ring-gray-100">
-              <p className="text-sm text-gray-400">Products coming soon.</p>
+              <p className="text-sm text-gray-400">No products available</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
@@ -179,22 +159,6 @@ export function StoreHomePage() {
           </div>
         </section>
 
-        {/* Customer Reviews */}
-        <section className="py-10">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground">What Our Customers Say</h2>
-            <p className="mt-1 text-sm text-gray-500">Trusted by hundreds of happy families</p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {reviews.map((review, i) => (
-              <div key={i} className="rounded-2xl bg-surface p-5 ring-1 ring-gray-100 shadow-sm">
-                <StarRating rating={review.rating} />
-                <p className="mt-3 text-sm text-gray-600 leading-relaxed">{review.text}</p>
-                <p className="mt-3 text-xs font-semibold text-foreground">{review.name}</p>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   );

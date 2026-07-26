@@ -14,11 +14,7 @@ export async function getStoreSettings(
   let settings = await StoreSettings.findOne();
 
   if (!settings) {
-    settings = await StoreSettings.create({
-      storeName: "Sagar General Store",
-      storeDescription:
-        "Your trusted neighbourhood grocery store for fresh produce and daily essentials.",
-    });
+    settings = await StoreSettings.create({});
   }
 
   res.status(200).json(ok(settings.toObject()));

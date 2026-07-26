@@ -113,7 +113,7 @@ export async function sendInvoiceEmail(
     return { success: false, message: "SMTP credentials not configured" };
   }
 
-  const storeName = process.env["STORE_NAME"] ?? "Smart Inventory Store";
+  const storeName = process.env["STORE_NAME"] ?? "";
 
   const info = await transporter.sendMail({
     from: process.env["SMTP_FROM"] ?? `${storeName} <${process.env["SMTP_USER"]}>`,

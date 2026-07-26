@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
 import {
   selectPOSItems,
@@ -17,9 +18,10 @@ import { CustomerInfoPanel } from './CustomerInfoPanel';
 
 interface POSCartProps {
   onPay: () => void;
+  onClearAll: () => void;
 }
 
-export function POSCart({ onPay }: POSCartProps) {
+export function POSCart({ onPay, onClearAll }: POSCartProps) {
   const items = useAppSelector(selectPOSItems);
   const itemCount = useAppSelector(selectPOSItemCount);
   const subtotal = useAppSelector(selectPOSSubtotal);
@@ -28,6 +30,25 @@ export function POSCart({ onPay }: POSCartProps) {
   const billDiscount = useAppSelector(selectPOSBillDiscount);
   const couponDiscount = useAppSelector(selectPOSCouponDiscount);
   const grandTotal = useAppSelector(selectPOSGrandTotal);
+
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+  }, []);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(null), 2500);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
+  const handleClearAll = useCallback(() => {
+    onClearAll();
+    setShowConfirmClear(false);
+    showToast('Cart cleared successfully.');
+  }, [onClearAll, showToast]);
 
   return (
     <div className="flex h-full flex-col">
@@ -42,7 +63,11 @@ export function POSCart({ onPay }: POSCartProps) {
           )}
         </h2>
         {items.length > 0 && (
-          <button className="text-xs text-red-500 hover:text-red-700" title="Clear all items">
+          <button
+            onClick={() => setShowConfirmClear(true)}
+            className="text-xs text-red-500 hover:text-red-700"
+            title="Clear all items"
+          >
             Clear All
           </button>
         )}
@@ -95,6 +120,56 @@ export function POSCart({ onPay }: POSCartProps) {
             >
               PAY {grandTotal > 0 ? `₹${grandTotal.toFixed(2)}` : ''}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Clear All Confirmation Dialog */}
+      {showConfirmClear && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          onClick={() => setShowConfirmClear(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl ring-1 ring-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                <line x1="12" x2="12" y1="9" y2="13" />
+                <line x1="12" x2="12.01" y1="17" y2="17" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">Clear Cart</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Are you sure you want to remove all items from the cart?
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirmClear(false)}
+                className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="inline-flex h-9 items-center rounded-lg bg-red-600 px-4 text-sm font-medium text-white transition-colors hover:bg-red-700"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Toast */}
+      {toastMessage && (
+        <div className="pointer-events-none fixed inset-x-0 top-4 z-[60] flex justify-center">
+          <div className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+            {toastMessage}
           </div>
         </div>
       )}

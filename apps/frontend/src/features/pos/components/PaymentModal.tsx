@@ -12,6 +12,7 @@ import { UPIPayment } from './UPIPayment';
 import { CardPayment } from './CardPayment';
 import { SplitPayment } from './SplitPayment';
 import type { POSInvoicePayment } from '../api/pos-api';
+import { ApiError } from '@/shared/api/http-client';
 
 interface PaymentModalProps {
   grandTotal: number;
@@ -66,11 +67,23 @@ export function PaymentModal({ grandTotal, onClose, onComplete }: PaymentModalPr
       },
       {
         onSuccess: (res) => {
-          dispatch(clearPOSState());
-          onComplete(res.data._id);
+          try {
+            dispatch(clearPOSState());
+            const invoiceId = res.data?._id;
+            if (!invoiceId) {
+              setError('Checkout succeeded but invoice ID was missing');
+              return;
+            }
+            onComplete(invoiceId);
+          } catch (err) {
+            setError('Checkout succeeded but failed to complete: ' + (err instanceof Error ? err.message : 'Unknown error'));
+          }
         },
         onError: (err: Error) => {
-          setError(err.message || 'Checkout failed');
+          const message = err instanceof ApiError
+            ? err.message
+            : err.message || 'Checkout failed';
+          setError(message);
         },
       },
     );
@@ -85,12 +98,14 @@ export function PaymentModal({ grandTotal, onClose, onComplete }: PaymentModalPr
             <h2 className="text-lg font-bold text-foreground">Payment</h2>
             <p className="text-xs text-gray-500">{items.length} items</p>
           </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          >
-            ✕
-          </button>
+          {!checkout.isPending && (
+            <button
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Grand Total Display */}
@@ -110,6 +125,7 @@ export function PaymentModal({ grandTotal, onClose, onComplete }: PaymentModalPr
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); setError(''); }}
+              disabled={checkout.isPending}
               className={`flex-1 py-3 text-sm font-medium transition ${
                 activeTab === tab
                   ? 'border-b-2 border-teal-600 text-teal-700'
@@ -157,12 +173,14 @@ export function PaymentModal({ grandTotal, onClose, onComplete }: PaymentModalPr
                   <span className="font-medium capitalize text-gray-700">{p.method}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-bold">{formatINR(p.amount)}</span>
-                    <button
-                      onClick={() => handleRemovePayment(i)}
-                      className="text-red-400 hover:text-red-600"
-                    >
-                      ✕
-                    </button>
+                    {!checkout.isPending && (
+                      <button
+                        onClick={() => handleRemovePayment(i)}
+                        className="text-red-400 hover:text-red-600"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -172,13 +190,20 @@ export function PaymentModal({ grandTotal, onClose, onComplete }: PaymentModalPr
 
         {/* Footer */}
         <div className="border-t border-gray-200 px-6 py-4">
-          <button
-            onClick={handleSubmit}
-            disabled={Math.abs(totalPaid - grandTotal) > 0.01 || checkout.isPending}
-            className="w-full rounded-lg bg-teal-700 py-3 text-base font-bold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {checkout.isPending ? 'Processing...' : `Confirm Payment - ${formatINR(grandTotal)}`}
-          </button>
+          {checkout.isPending ? (
+            <div className="flex items-center justify-center gap-3 py-3">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
+              <span className="text-sm font-medium text-gray-600">Processing payment...</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={Math.abs(totalPaid - grandTotal) > 0.01}
+              className="w-full rounded-lg bg-teal-700 py-3 text-base font-bold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Confirm Payment - {formatINR(grandTotal)}
+            </button>
+          )}
         </div>
       </div>
     </div>

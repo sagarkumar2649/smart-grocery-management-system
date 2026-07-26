@@ -15,6 +15,7 @@ import { buildPOSRouter } from "./pos/pos.routes.js";
 import { buildCouponRouter } from "./pos/coupon.routes.js";
 import { buildAdminSettingsRouter } from "./admin-settings/admin-settings.routes.js";
 import { buildOrderRouter } from "./orders/order.routes.js";
+import { buildDashboardRouter } from "./dashboard/dashboard.routes.js";
 import { AdminSettings } from "./admin-settings/admin-settings.model.js";
 import { StoreSettings } from "./store-settings/store-settings.model.js";
 
@@ -34,6 +35,7 @@ export function buildApiRouter(): Router {
   router.use("/coupons", buildCouponRouter());
   router.use("/admin/settings", buildAdminSettingsRouter());
   router.use("/orders", buildOrderRouter());
+  router.use("/dashboard", buildDashboardRouter());
 
   // ── Public: UPI payment info (no auth required) ─────────────────────────
   router.get("/payment/upi-info", async (_req, res) => {
@@ -45,12 +47,12 @@ export function buildApiRouter(): Router {
         ok({
           upiId: adminSettings?.payment?.upiId ?? "",
           upiQrUrl: adminSettings?.payment?.upiQrUrl ?? "",
-          storeName: storeSettings?.storeName ?? "SmartStore",
+          storeName: storeSettings?.storeName ?? "",
         }),
       );
     } catch {
       res.status(200).json(
-        ok({ upiId: "", upiQrUrl: "", storeName: "SmartStore" }),
+        ok({ upiId: "", upiQrUrl: "", storeName: "" }),
       );
     }
   });

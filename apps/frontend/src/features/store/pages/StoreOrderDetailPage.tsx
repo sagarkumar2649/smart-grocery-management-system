@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useMyOrder } from '@/features/store/hooks/use-orders';
+import { useMyOrder, useCancelOrder } from '@/features/store/hooks/use-orders';
 import type { Order, OrderStatus } from '@/features/store/api/orders-api';
 
 function formatINR(amount: number): string {
@@ -22,21 +23,33 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string }> = {
   placed: { label: 'Order Placed', cls: 'text-blue-600 bg-blue-50' },
   confirmed: { label: 'Confirmed', cls: 'text-indigo-600 bg-indigo-50' },
   processing: { label: 'Processing', cls: 'text-purple-600 bg-purple-50' },
+  packed: { label: 'Packed', cls: 'text-cyan-600 bg-cyan-50' },
   shipped: { label: 'Shipped', cls: 'text-amber-600 bg-amber-50' },
+  out_for_delivery: { label: 'Out for Delivery', cls: 'text-orange-600 bg-orange-50' },
   delivered: { label: 'Delivered', cls: 'text-green-600 bg-green-50' },
   cancelled: { label: 'Cancelled', cls: 'text-red-600 bg-red-50' },
 };
 
+const TIMELINE_STEPS: { status: OrderStatus; label: string }[] = [
+  { status: 'placed', label: 'Order Placed' },
+  { status: 'confirmed', label: 'Confirmed' },
+  { status: 'processing', label: 'Processing' },
+  { status: 'packed', label: 'Packed' },
+  { status: 'shipped', label: 'Shipped' },
+  { status: 'out_for_delivery', label: 'Out for Delivery' },
+  { status: 'delivered', label: 'Delivered' },
+];
+
 function TrackingBar({ order }: { order: Order }) {
-  const steps = ['placed', 'confirmed', 'processing', 'shipped', 'delivered'];
+  const steps = ['placed', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
   const currentIdx = steps.indexOf(order.orderStatus);
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       {steps.map((step, i) => (
         <div key={step} className="flex items-center">
           <div
-            className={`h-2 w-8 rounded-full transition-colors ${
+            className={`h-2 flex-1 min-w-[14px] rounded-full transition-colors ${
               i <= currentIdx && order.orderStatus !== 'cancelled'
                 ? 'bg-teal-500'
                 : 'bg-gray-200'
@@ -48,9 +61,72 @@ function TrackingBar({ order }: { order: Order }) {
   );
 }
 
+function OrderTimeline({ order }: { order: Order }) {
+  const currentIdx = TIMELINE_STEPS.findIndex((s) => s.status === order.orderStatus);
+  const isCancelled = order.orderStatus === 'cancelled';
+
+  return (
+    <div className="space-y-0">
+      {TIMELINE_STEPS.map((step, i) => {
+        const isCompleted = !isCancelled && currentIdx >= i;
+        const isCurrent = !isCancelled && currentIdx === i;
+        const historyEntry = order.statusHistory?.find((h) => h.status === step.status);
+
+        return (
+          <div key={step.status} className="flex items-start gap-3">
+            <div className="flex flex-col items-center">
+              <div
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                  isCompleted
+                    ? 'bg-green-500 text-white'
+                    : isCurrent
+                    ? 'bg-teal-500 text-white ring-2 ring-teal-200'
+                    : 'bg-gray-200 text-gray-400'
+                }`}
+              >
+                {isCompleted ? '✓' : i + 1}
+              </div>
+              {i < TIMELINE_STEPS.length - 1 && (
+                <div className={`w-0.5 h-6 ${isCompleted && !isCurrent ? 'bg-green-400' : 'bg-gray-200'}`} />
+              )}
+            </div>
+            <div className="pb-4">
+              <p className={`text-sm font-medium ${isCompleted ? 'text-foreground' : 'text-gray-400'}`}>
+                {step.label}
+              </p>
+              {historyEntry && (
+                <p className="text-xs text-gray-400">
+                  {new Date(historyEntry.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {historyEntry.note && <span className="ml-1 text-gray-500">— {historyEntry.note}</span>}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      {isCancelled && (
+        <div className="flex items-start gap-3">
+          <div className="flex flex-col items-center">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">✕</div>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-red-600">Cancelled</p>
+            {order.cancelReason && (
+              <p className="text-xs text-red-500 mt-0.5">Reason: {order.cancelReason}</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function StoreOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: order, isLoading, error } = useMyOrder(id ?? '');
+  const cancelOrderMutation = useCancelOrder();
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   if (isLoading) {
     return (
@@ -79,6 +155,18 @@ export function StoreOrderDetailPage() {
   }
 
   const statusConfig = STATUS_CONFIG[order.orderStatus];
+  const canCancel = order.orderStatus === 'placed';
+
+  const handleCancel = async () => {
+    if (!cancelReason.trim()) return;
+    try {
+      await cancelOrderMutation.mutateAsync({ id: order._id, reason: cancelReason.trim() });
+      setShowCancelForm(false);
+      setCancelReason('');
+    } catch {
+      // error handled by mutation
+    }
+  };
 
   return (
     <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-6 animate-in fade-in duration-500">
@@ -126,6 +214,41 @@ export function StoreOrderDetailPage() {
             </p>
           </div>
         </div>
+
+        {/* Tracking Info from Admin */}
+        {(order.trackingNumber || order.deliveryPartner || order.estimatedDeliveryDate) && (
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Shipping Info</p>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {order.trackingNumber && (
+                <div>
+                  <p className="text-gray-500">Tracking Number</p>
+                  <p className="font-medium text-foreground">{order.trackingNumber}</p>
+                </div>
+              )}
+              {order.deliveryPartner && (
+                <div>
+                  <p className="text-gray-500">Delivery Partner</p>
+                  <p className="font-medium text-foreground">{order.deliveryPartner}</p>
+                </div>
+              )}
+              {order.estimatedDeliveryDate && (
+                <div>
+                  <p className="text-gray-500">Estimated Delivery</p>
+                  <p className="font-medium text-foreground">
+                    {new Date(order.estimatedDeliveryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Timeline */}
+      <div className="rounded-2xl bg-surface p-6 ring-1 ring-gray-100 shadow-sm mb-6">
+        <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">Order Timeline</h2>
+        <OrderTimeline order={order} />
       </div>
 
       {/* Items */}
@@ -225,13 +348,38 @@ export function StoreOrderDetailPage() {
         >
           View My Orders
         </Link>
-        <Link
-          to="/store/products"
-          className="flex-1 rounded-xl border-2 border-primary bg-surface px-4 py-3.5 text-center text-sm font-semibold text-primary transition-all duration-200 hover:bg-primary hover:text-white"
-        >
-          Continue Shopping
-        </Link>
+        {canCancel && (
+          <button
+            type="button"
+            onClick={() => setShowCancelForm(!showCancelForm)}
+            className="flex-1 rounded-xl border-2 border-red-300 bg-surface px-4 py-3.5 text-center text-sm font-semibold text-red-600 transition-all duration-200 hover:bg-red-50"
+          >
+            {showCancelForm ? 'Close' : 'Cancel Order'}
+          </button>
+        )}
       </div>
+
+      {/* Cancel Form */}
+      {showCancelForm && (
+        <div className="mt-4 rounded-2xl bg-red-50 border border-red-200 p-6 space-y-3">
+          <p className="text-sm font-semibold text-red-700">Cancel this order</p>
+          <input
+            type="text"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            className="h-10 w-full rounded-xl border border-red-200 bg-white px-4 text-sm text-foreground placeholder:text-gray-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200 transition-all"
+            placeholder="Reason for cancellation..."
+          />
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={!cancelReason.trim() || cancelOrderMutation.isPending}
+            className="rounded-xl bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-red-700 disabled:opacity-50"
+          >
+            {cancelOrderMutation.isPending ? 'Cancelling...' : 'Confirm Cancel'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

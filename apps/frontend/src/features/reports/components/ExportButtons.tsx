@@ -1,5 +1,6 @@
 import type { ExportColumn } from "@/shared/lib/export-utils";
 import { exportToCSV, exportToExcel, printReport } from "@/shared/lib/export-utils";
+import { useStoreSettings } from "@/features/store/hooks/use-store-settings";
 
 const Printer = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -25,6 +26,9 @@ interface ExportButtonsProps<T extends Record<string, unknown>> {
 }
 
 export function ExportButtons<T extends Record<string, unknown>>({ columns, rows, title, filename }: ExportButtonsProps<T>) {
+  const { data: settingsRes } = useStoreSettings();
+  const storeName = settingsRes?.data?.storeName;
+
   return (
     <div className="flex items-center gap-1.5">
       <button
@@ -47,7 +51,7 @@ export function ExportButtons<T extends Record<string, unknown>>({ columns, rows
       </button>
       <button
         type="button"
-        onClick={() => printReport(title)}
+        onClick={() => printReport(title, storeName)}
         className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
         title="Print Report"
       >

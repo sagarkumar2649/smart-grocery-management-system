@@ -6,9 +6,17 @@ export type OrderStatus =
   | "placed"
   | "confirmed"
   | "processing"
+  | "packed"
   | "shipped"
+  | "out_for_delivery"
   | "delivered"
   | "cancelled";
+
+export interface IStatusHistoryEntry {
+  status: string;
+  timestamp: Date;
+  note?: string;
+}
 
 export interface IOrderItem {
   product: Types.ObjectId;
@@ -53,6 +61,11 @@ export interface IOrder extends Document {
   razorpayPaymentId?: string;
   notes?: string;
   cancelReason?: string;
+  trackingNumber?: string;
+  deliveryPartner?: string;
+  estimatedDeliveryDate?: Date;
+  internalNotes?: string;
+  statusHistory: IStatusHistoryEntry[];
   deliveredAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -82,6 +95,15 @@ const orderAddressSchema = new Schema<IOrderAddress>(
     city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true },
     pincode: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
+
+const statusHistoryEntrySchema = new Schema<IStatusHistoryEntry>(
+  {
+    status: { type: String, required: true },
+    timestamp: { type: Date, required: true, default: Date.now },
+    note: { type: String, trim: true },
   },
   { _id: false },
 );
@@ -133,7 +155,7 @@ const orderSchema = new Schema<IOrder>(
     },
     orderStatus: {
       type: String,
-      enum: ["placed", "confirmed", "processing", "shipped", "delivered", "cancelled"],
+      enum: ["placed", "confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled"],
       required: true,
       default: "placed",
     },
@@ -141,6 +163,11 @@ const orderSchema = new Schema<IOrder>(
     razorpayPaymentId: { type: String, trim: true },
     notes: { type: String, trim: true, maxlength: 1000 },
     cancelReason: { type: String, trim: true, maxlength: 500 },
+    trackingNumber: { type: String, trim: true, maxlength: 200 },
+    deliveryPartner: { type: String, trim: true, maxlength: 200 },
+    estimatedDeliveryDate: { type: Date },
+    internalNotes: { type: String, trim: true, maxlength: 2000 },
+    statusHistory: { type: [statusHistoryEntrySchema], default: [] },
     deliveredAt: { type: Date },
   },
   { timestamps: true },

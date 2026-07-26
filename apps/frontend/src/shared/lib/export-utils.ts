@@ -48,7 +48,7 @@ export function exportToExcel<T extends Record<string, unknown>>(
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-export function printReport(title: string): void {
+export function printReport(title: string, storeName?: string): void {
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
 
@@ -71,7 +71,7 @@ export function printReport(title: string): void {
       @media print { body { margin: 0; } }
     </style></head><body>
     <h1>${title}</h1>
-    <div class="subtitle">Generated on ${new Date().toLocaleString("en-IN")} | Smart Inventory System</div>
+    <div class="subtitle">Generated on ${new Date().toLocaleString("en-IN")}${storeName ? ` | ${storeName}` : ''}</div>
     ${content.innerHTML}
     </body></html>`);
   printWindow.document.close();

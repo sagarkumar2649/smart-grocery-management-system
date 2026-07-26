@@ -8,6 +8,7 @@ import {
   fetchAllOrders,
   fetchOrderDetail,
   updateOrderStatus,
+  updateAdminInfo,
   fetchOrderStats,
   fetchUpiInfo,
   verifyPayment,
@@ -133,14 +134,18 @@ export function useUpdateOrderStatus() {
       id,
       orderStatus,
       cancelReason,
+      note,
     }: {
       id: string;
       orderStatus: OrderStatus;
       cancelReason?: string;
-    }) => updateOrderStatus(id, { orderStatus, ...(cancelReason !== undefined ? { cancelReason } : {}) }, getToken).then((res) => res.data),
+      note?: string;
+    }) => updateOrderStatus(id, { orderStatus, ...(cancelReason !== undefined ? { cancelReason } : {}), ...(note !== undefined ? { note } : {}) }, getToken).then((res) => res.data),
     onSuccess: (_data, { id }) => {
       void qc.invalidateQueries({ queryKey: orderKeys.admin() });
       void qc.invalidateQueries({ queryKey: orderKeys.adminDetail(id) });
+      void qc.invalidateQueries({ queryKey: orderKeys.my() });
+      void qc.invalidateQueries({ queryKey: orderKeys.myDetail(id) });
       void qc.invalidateQueries({ queryKey: orderKeys.stats() });
     },
   });
@@ -189,6 +194,32 @@ export function useVerifyPayment() {
       void qc.invalidateQueries({ queryKey: orderKeys.admin() });
       void qc.invalidateQueries({ queryKey: orderKeys.adminDetail(id) });
       void qc.invalidateQueries({ queryKey: orderKeys.stats() });
+    },
+  });
+}
+
+export function useUpdateAdminInfo() {
+  const qc = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        trackingNumber?: string;
+        deliveryPartner?: string;
+        estimatedDeliveryDate?: string;
+        internalNotes?: string;
+      };
+    }) => updateAdminInfo(id, data, getToken).then((res) => res.data),
+    onSuccess: (_data, { id }) => {
+      void qc.invalidateQueries({ queryKey: orderKeys.admin() });
+      void qc.invalidateQueries({ queryKey: orderKeys.adminDetail(id) });
+      void qc.invalidateQueries({ queryKey: orderKeys.my() });
+      void qc.invalidateQueries({ queryKey: orderKeys.myDetail(id) });
     },
   });
 }

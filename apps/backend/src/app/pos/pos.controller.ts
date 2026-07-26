@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import mongoose from "mongoose";
-import { Invoice, type IInvoice } from "./invoice.model.js";
+import { Invoice, type IInvoice, type IInvoiceItem, type IInvoicePayment, type IGstBreakdown } from "./invoice.model.js";
 import { Coupon } from "./coupon.model.js";
 import { Product } from "../products/product.model.js";
 import { StockMovement } from "../inventory/stock-movement.model.js";
@@ -41,27 +41,27 @@ async function generateInvoiceNumber(): Promise<string> {
 }
 
 function formatInvoice(doc: IInvoice) {
-  const obj = doc.toObject();
+  const obj = "toObject" in doc && typeof doc.toObject === "function" ? doc.toObject() : (doc as unknown as Record<string, unknown>);
   return {
     ...obj,
-    subtotal: paiseToRupees(obj.subtotal),
-    totalItemDiscount: paiseToRupees(obj.totalItemDiscount),
-    couponDiscount: paiseToRupees(obj.couponDiscount),
-    totalGST: paiseToRupees(obj.totalGST),
+    subtotal: paiseToRupees(obj.subtotal as number),
+    totalItemDiscount: paiseToRupees(obj.totalItemDiscount as number),
+    couponDiscount: paiseToRupees(obj.couponDiscount as number),
+    totalGST: paiseToRupees(obj.totalGST as number),
     gstBreakdown: {
-      cgst: paiseToRupees(obj.gstBreakdown.cgst),
-      sgst: paiseToRupees(obj.gstBreakdown.sgst),
-      igst: paiseToRupees(obj.gstBreakdown.igst),
+      cgst: paiseToRupees(((obj.gstBreakdown as IGstBreakdown) ?? { cgst: 0, sgst: 0, igst: 0 }).cgst),
+      sgst: paiseToRupees(((obj.gstBreakdown as IGstBreakdown) ?? { cgst: 0, sgst: 0, igst: 0 }).sgst),
+      igst: paiseToRupees(((obj.gstBreakdown as IGstBreakdown) ?? { cgst: 0, sgst: 0, igst: 0 }).igst),
     },
-    grandTotal: paiseToRupees(obj.grandTotal),
-    items: obj.items.map((item: (typeof obj.items)[number]) => ({
+    grandTotal: paiseToRupees(obj.grandTotal as number),
+    items: ((obj.items as IInvoiceItem[]) ?? []).map((item) => ({
       ...item,
       unitPrice: paiseToRupees(item.unitPrice),
       discount: paiseToRupees(item.discount),
       gstAmount: paiseToRupees(item.gstAmount),
       total: paiseToRupees(item.total),
     })),
-    payments: obj.payments.map((p: (typeof obj.payments)[number]) => ({
+    payments: ((obj.payments as IInvoicePayment[]) ?? []).map((p) => ({
       ...p,
       amount: paiseToRupees(p.amount),
     })),
@@ -209,154 +209,154 @@ export async function checkout(req: Request, res: Response): Promise<void> {
   const data = parsed.data;
   const clerkId = (req as AuthenticatedRequest).auth?.userId;
 
-  const appUser = await AppUser.findOne({ clerkId }).lean();
-  if (!appUser) {
-    res.status(403).json(fail("User not provisioned", "FORBIDDEN"));
-    return;
-  }
-
-  // Fetch all products in one query
-  const productIds = data.items.map((item) => new mongoose.Types.ObjectId(item.productId));
-  const products = await Product.find({ _id: { $in: productIds } }).lean();
-  const productMap = new Map(products.map((p) => [String(p._id), p]));
-
-  // Validate items and calculate totals
-  let subtotal = 0;
-  let totalItemDiscount = 0;
-  let totalGST = 0;
-  let cgstTotal = 0;
-  let sgstTotal = 0;
-
-  const invoiceItems = data.items.map((item) => {
-    const product = productMap.get(item.productId);
-    if (!product) {
-      throw new Error(`Product not found: ${item.productId}`);
-    }
-    if (product.stock < item.quantity) {
-      throw new Error(`Insufficient stock for "${product.name}": available ${product.stock}, requested ${item.quantity}`);
-    }
-
-    const unitPrice = product.sellingPrice;
-    const lineTotalBeforeDiscount = unitPrice * item.quantity;
-
-    let lineDiscount = rupeesToPaise(item.discount ?? 0);
-    if (item.discountType === "percentage" && item.discount) {
-      lineDiscount = Math.round(lineTotalBeforeDiscount * (item.discount / 100));
-    }
-
-    const taxableAmount = lineTotalBeforeDiscount - lineDiscount;
-    const gstAmount = Math.round(taxableAmount * (product.gstPercent / 100));
-    const lineTotal = taxableAmount + gstAmount;
-
-    subtotal += lineTotalBeforeDiscount;
-    totalItemDiscount += lineDiscount;
-    totalGST += gstAmount;
-
-    const halfGST = Math.round(gstAmount / 2);
-    cgstTotal += halfGST;
-    sgstTotal += gstAmount - halfGST;
-
-    return {
-      product: product._id,
-      name: product.name,
-      sku: product.sku,
-      quantity: item.quantity,
-      unitPrice,
-      discount: lineDiscount,
-      discountType: item.discountType ?? "flat",
-      gstPercent: product.gstPercent,
-      gstAmount,
-      total: lineTotal,
-    };
-  });
-
-  // Apply bill-level discount
-  let billDiscount = rupeesToPaise(data.discount ?? 0);
-  if (data.discountType === "percentage" && data.discount) {
-    billDiscount = Math.round(subtotal * (data.discount / 100));
-  }
-
-  // Apply coupon
-  let couponDiscount = 0;
-  let couponCode: string | undefined;
-  if (data.couponCode) {
-    const coupon = await Coupon.findOne({
-      code: data.couponCode.trim().toUpperCase(),
-      isActive: true,
-    }).lean();
-
-    if (!coupon) {
-      res.status(400).json(fail("Invalid or inactive coupon code", "VALIDATION_ERROR"));
+  try {
+    const appUser = await AppUser.findOne({ clerkId }).lean();
+    if (!appUser) {
+      res.status(403).json(fail("User not provisioned", "FORBIDDEN"));
       return;
     }
 
-    const now = new Date();
-    if (now < coupon.validFrom || now > coupon.validUntil) {
-      res.status(400).json(fail("Coupon has expired or is not yet valid", "VALIDATION_ERROR"));
+    // Fetch all products in one query
+    const productIds = data.items.map((item) => new mongoose.Types.ObjectId(item.productId));
+    const products = await Product.find({ _id: { $in: productIds } }).lean();
+    const productMap = new Map(products.map((p) => [String(p._id), p]));
+
+    // Validate items and calculate totals
+    let subtotal = 0;
+    let totalItemDiscount = 0;
+    let totalGST = 0;
+    let cgstTotal = 0;
+    let sgstTotal = 0;
+
+    const invoiceItems = data.items.map((item) => {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        throw new Error(`Product not found: ${item.productId}`);
+      }
+      if (product.stock < item.quantity) {
+        throw new Error(`Insufficient stock for "${product.name}": available ${product.stock}, requested ${item.quantity}`);
+      }
+
+      const unitPrice = product.sellingPrice;
+      const lineTotalBeforeDiscount = unitPrice * item.quantity;
+
+      let lineDiscount = rupeesToPaise(item.discount ?? 0) * item.quantity;
+      if (item.discountType === "percentage" && item.discount) {
+        lineDiscount = Math.round(lineTotalBeforeDiscount * (item.discount / 100));
+      }
+
+      const taxableAmount = lineTotalBeforeDiscount - lineDiscount;
+      const gstAmount = Math.round(taxableAmount * (product.gstPercent / 100));
+      const lineTotal = taxableAmount + gstAmount;
+
+      subtotal += lineTotalBeforeDiscount;
+      totalItemDiscount += lineDiscount;
+      totalGST += gstAmount;
+
+      const halfGST = Math.round(gstAmount / 2);
+      cgstTotal += halfGST;
+      sgstTotal += gstAmount - halfGST;
+
+      return {
+        product: product._id,
+        name: product.name,
+        sku: product.sku,
+        quantity: item.quantity,
+        unitPrice,
+        discount: lineDiscount,
+        discountType: item.discountType ?? "flat",
+        gstPercent: product.gstPercent,
+        gstAmount,
+        total: lineTotal,
+      };
+    });
+
+    // Apply bill-level discount
+    let billDiscount = rupeesToPaise(data.discount ?? 0);
+    if (data.discountType === "percentage" && data.discount) {
+      billDiscount = Math.round(subtotal * (data.discount / 100));
+    }
+
+    // Apply coupon
+    let couponDiscount = 0;
+    let couponCode: string | undefined;
+    if (data.couponCode) {
+      const coupon = await Coupon.findOne({
+        code: data.couponCode.trim().toUpperCase(),
+        isActive: true,
+      }).lean();
+
+      if (!coupon) {
+        res.status(400).json(fail("Invalid or inactive coupon code", "VALIDATION_ERROR"));
+        return;
+      }
+
+      const now = new Date();
+      if (now < coupon.validFrom || now > coupon.validUntil) {
+        res.status(400).json(fail("Coupon has expired or is not yet valid", "VALIDATION_ERROR"));
+        return;
+      }
+
+      const afterItemDiscount = subtotal - totalItemDiscount;
+      if (afterItemDiscount < coupon.minOrderAmount) {
+        res.status(400).json(
+          fail(
+            `Minimum order amount ₹${(coupon.minOrderAmount / 100).toFixed(2)} required for this coupon`,
+            "VALIDATION_ERROR",
+          ),
+        );
+        return;
+      }
+
+      if (coupon.usageLimit !== undefined && coupon.usedCount >= coupon.usageLimit) {
+        res.status(400).json(fail("Coupon usage limit reached", "VALIDATION_ERROR"));
+        return;
+      }
+
+      if (coupon.discountType === "percentage") {
+        couponDiscount = Math.round(afterItemDiscount * (coupon.discountValue / 100));
+        if (coupon.maxDiscountAmount > 0 && couponDiscount > coupon.maxDiscountAmount) {
+          couponDiscount = coupon.maxDiscountAmount;
+        }
+      } else {
+        couponDiscount = Math.min(coupon.discountValue, afterItemDiscount);
+      }
+
+      couponCode = coupon.code;
+    }
+
+    const grandTotal = subtotal - totalItemDiscount - billDiscount - couponDiscount + totalGST;
+
+    if (grandTotal < 0) {
+      res.status(400).json(fail("Grand total cannot be negative", "VALIDATION_ERROR"));
       return;
     }
 
-    const afterItemDiscount = subtotal - totalItemDiscount;
-    if (afterItemDiscount < coupon.minOrderAmount) {
+    // Validate payments
+    // Tolerance accounts for rounding differences between frontend (rupees) and backend (paise)
+    // when computing GST: Math.round(price_rupees * gst / 100) vs Math.round(price_paise * gst / 100)
+    const totalPaid = data.payments.reduce((sum, p) => sum + rupeesToPaise(p.amount), 0);
+    if (Math.abs(totalPaid - grandTotal) > 50) {
       res.status(400).json(
         fail(
-          `Minimum order amount ₹${(coupon.minOrderAmount / 100).toFixed(2)} required for this coupon`,
+          `Payment amount ₹${(totalPaid / 100).toFixed(2)} does not match grand total ₹${(grandTotal / 100).toFixed(2)}`,
           "VALIDATION_ERROR",
         ),
       );
       return;
     }
 
-    if (coupon.usageLimit !== undefined && coupon.usedCount >= coupon.usageLimit) {
-      res.status(400).json(fail("Coupon usage limit reached", "VALIDATION_ERROR"));
-      return;
-    }
+    const payments = data.payments.map((p) => ({
+      method: p.method,
+      amount: rupeesToPaise(p.amount),
+      reference: p.reference,
+      upiTransactionId: p.upiTransactionId,
+      cardLast4: p.cardLast4,
+      cardType: p.cardType,
+    }));
 
-    if (coupon.discountType === "percentage") {
-      couponDiscount = Math.round(afterItemDiscount * (coupon.discountValue / 100));
-      if (coupon.maxDiscountAmount > 0 && couponDiscount > coupon.maxDiscountAmount) {
-        couponDiscount = coupon.maxDiscountAmount;
-      }
-    } else {
-      couponDiscount = Math.min(coupon.discountValue, afterItemDiscount);
-    }
+    const paymentStatus = totalPaid >= grandTotal ? "paid" : "partial";
 
-    couponCode = coupon.code;
-  }
-
-  const grandTotal = subtotal - totalItemDiscount - billDiscount - couponDiscount + totalGST;
-
-  if (grandTotal < 0) {
-    res.status(400).json(fail("Grand total cannot be negative", "VALIDATION_ERROR"));
-    return;
-  }
-
-  // Validate payments
-  // Tolerance accounts for rounding differences between frontend (rupees) and backend (paise)
-  // when computing GST: Math.round(price_rupees * gst / 100) vs Math.round(price_paise * gst / 100)
-  const totalPaid = data.payments.reduce((sum, p) => sum + rupeesToPaise(p.amount), 0);
-  if (Math.abs(totalPaid - grandTotal) > 10) {
-    res.status(400).json(
-      fail(
-        `Payment amount ₹${(totalPaid / 100).toFixed(2)} does not match grand total ₹${(grandTotal / 100).toFixed(2)}`,
-        "VALIDATION_ERROR",
-      ),
-    );
-    return;
-  }
-
-  const payments = data.payments.map((p) => ({
-    method: p.method,
-    amount: rupeesToPaise(p.amount),
-    reference: p.reference,
-    upiTransactionId: p.upiTransactionId,
-    cardLast4: p.cardLast4,
-    cardType: p.cardType,
-  }));
-
-  const paymentStatus = totalPaid >= grandTotal ? "paid" : "partial";
-
-  try {
     const invoiceNumber = await generateInvoiceNumber();
 
     // Reduce stock for each product (no transaction — sequential)
@@ -425,65 +425,75 @@ export async function checkout(req: Request, res: Response): Promise<void> {
 }
 
 export async function listInvoices(req: Request, res: Response): Promise<void> {
-  const {
-    page = "1",
-    limit = "20",
-    status = "",
-    startDate = "",
-    endDate = "",
-    search = "",
-  } = req.query as Record<string, string>;
+  try {
+    const {
+      page = "1",
+      limit = "20",
+      status = "",
+      startDate = "",
+      endDate = "",
+      search = "",
+    } = req.query as Record<string, string>;
 
-  const pageNum = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
-  const skip = (pageNum - 1) * limitNum;
+    const pageNum = Math.max(1, parseInt(page, 10));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+    const skip = (pageNum - 1) * limitNum;
 
-  const filter: Record<string, unknown> = {};
-  if (status) filter["status"] = status;
-  if (search.trim()) {
-    filter["$or"] = [
-      { invoiceNumber: new RegExp(search.trim(), "i") },
-      { customerName: new RegExp(search.trim(), "i") },
-      { customerPhone: new RegExp(search.trim(), "i") },
-    ];
-  }
-  if (startDate || endDate) {
-    const dateFilter: Record<string, Date> = {};
-    if (startDate) dateFilter["$gte"] = new Date(startDate);
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      dateFilter["$lte"] = end;
+    const filter: Record<string, unknown> = {};
+    if (status) filter["status"] = status;
+    if (search.trim()) {
+      filter["$or"] = [
+        { invoiceNumber: new RegExp(search.trim(), "i") },
+        { customerName: new RegExp(search.trim(), "i") },
+        { customerPhone: new RegExp(search.trim(), "i") },
+      ];
     }
-    filter["createdAt"] = dateFilter;
+    if (startDate || endDate) {
+      const dateFilter: Record<string, Date> = {};
+      if (startDate) dateFilter["$gte"] = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter["$lte"] = end;
+      }
+      filter["createdAt"] = dateFilter;
+    }
+
+    const [invoices, total] = await Promise.all([
+      Invoice.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Invoice.countDocuments(filter),
+    ]);
+
+    res.status(200).json(
+      ok(invoices.map((inv) => formatInvoice(inv as unknown as IInvoice)), {
+        pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
+      }),
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to fetch invoices";
+    res.status(500).json(fail(message, "INVOICE_ERROR"));
   }
-
-  const [invoices, total] = await Promise.all([
-    Invoice.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean(),
-    Invoice.countDocuments(filter),
-  ]);
-
-  res.status(200).json(
-    ok(invoices.map((inv) => formatInvoice(inv as unknown as IInvoice)), {
-      pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
-    }),
-  );
 }
 
 export async function getInvoice(req: Request, res: Response): Promise<void> {
-  const { id } = req.params as { id: string };
+  try {
+    const { id } = req.params as { id: string };
 
-  const invoice = await Invoice.findById(id).lean();
-  if (!invoice) {
-    res.status(404).json(fail("NOT_FOUND", "Invoice not found"));
-    return;
+    const invoice = await Invoice.findById(id).lean();
+    if (!invoice) {
+      res.status(404).json(fail("Invoice not found", "NOT_FOUND"));
+      return;
+    }
+
+    res.status(200).json(ok(formatInvoice(invoice as unknown as IInvoice)));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to fetch invoice";
+    res.status(500).json(fail(message, "INVOICE_ERROR"));
   }
-
-  res.status(200).json(ok(formatInvoice(invoice as unknown as IInvoice)));
 }
 
 export async function downloadInvoicePDF(req: Request, res: Response): Promise<void> {
@@ -491,7 +501,7 @@ export async function downloadInvoicePDF(req: Request, res: Response): Promise<v
 
   const invoice = await Invoice.findById(id).lean();
   if (!invoice) {
-    res.status(404).json(fail("NOT_FOUND", "Invoice not found"));
+    res.status(404).json(fail("Invoice not found", "NOT_FOUND"));
     return;
   }
 
@@ -502,7 +512,7 @@ export async function downloadInvoicePDF(req: Request, res: Response): Promise<v
     res.send(pdfBuffer);
   } catch (err) {
     const message = err instanceof Error ? err.message : "PDF generation failed";
-    res.status(500).json(fail("INTERNAL_ERROR", message));
+    res.status(500).json(fail(message, "INTERNAL_ERROR"));
   }
 }
 
@@ -511,19 +521,19 @@ export async function voidInvoice(req: Request, res: Response): Promise<void> {
   const parsed = voidSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
 
   const invoice = await Invoice.findById(id);
   if (!invoice) {
-    res.status(404).json(fail("NOT_FOUND", "Invoice not found"));
+    res.status(404).json(fail("Invoice not found", "NOT_FOUND"));
     return;
   }
 
   if (invoice.status !== "completed") {
-    res.status(400).json(fail("VALIDATION_ERROR", "Only completed invoices can be voided"));
+    res.status(400).json(fail("Only completed invoices can be voided", "VALIDATION_ERROR"));
     return;
   }
 
@@ -572,7 +582,7 @@ export async function validateCoupon(req: Request, res: Response): Promise<void>
   const parsed = validateCouponSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
@@ -583,26 +593,26 @@ export async function validateCoupon(req: Request, res: Response): Promise<void>
   }).lean();
 
   if (!coupon) {
-    res.status(404).json(fail("NOT_FOUND", "Invalid coupon code"));
+    res.status(404).json(fail("Invalid coupon code", "NOT_FOUND"));
     return;
   }
 
   const now = new Date();
   if (now < coupon.validFrom || now > coupon.validUntil) {
-    res.status(400).json(fail("VALIDATION_ERROR", "Coupon has expired or is not yet valid"));
+    res.status(400).json(fail("Coupon has expired or is not yet valid", "VALIDATION_ERROR"));
     return;
   }
 
   if (coupon.usageLimit !== undefined && coupon.usedCount >= coupon.usageLimit) {
-    res.status(400).json(fail("VALIDATION_ERROR", "Coupon usage limit reached"));
+    res.status(400).json(fail("Coupon usage limit reached", "VALIDATION_ERROR"));
     return;
   }
 
   if (parsed.data.subtotal < coupon.minOrderAmount) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         `Minimum order amount ₹${(coupon.minOrderAmount / 100).toFixed(2)} required`,
+        "VALIDATION_ERROR",
       ),
     );
     return;
@@ -634,14 +644,14 @@ export async function emailInvoice(req: Request, res: Response): Promise<void> {
   const parsed = emailSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
 
   const invoice = await Invoice.findById(id).lean();
   if (!invoice) {
-    res.status(404).json(fail("NOT_FOUND", "Invoice not found"));
+    res.status(404).json(fail("Invoice not found", "NOT_FOUND"));
     return;
   }
 
@@ -650,7 +660,7 @@ export async function emailInvoice(req: Request, res: Response): Promise<void> {
     const result = await sendInvoiceEmail(invoice as unknown as IInvoice, pdfBuffer, parsed.data.email);
 
     if (!result.success) {
-      res.status(500).json(fail("INTERNAL_ERROR", result.message));
+      res.status(500).json(fail(result.message, "INTERNAL_ERROR"));
       return;
     }
 
@@ -666,7 +676,7 @@ export async function getWhatsAppLink(req: Request, res: Response): Promise<void
 
   const invoice = await Invoice.findById(id).lean();
   if (!invoice) {
-    res.status(404).json(fail("NOT_FOUND", "Invoice not found"));
+    res.status(404).json(fail("Invoice not found", "NOT_FOUND"));
     return;
   }
 

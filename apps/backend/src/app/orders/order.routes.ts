@@ -9,6 +9,7 @@ import {
   getOrderDetail,
   updateOrderStatus,
   verifyPayment,
+  updateAdminInfo,
   getOrderStats,
 } from "./order.controller.js";
 
@@ -26,6 +27,7 @@ export function buildOrderRouter(): Router {
   router.get("/", requireAdmin, listAllOrders);
   router.get("/:id", requireAdmin, getOrderDetail);
   router.patch("/:id/status", requireAdmin, updateOrderStatus);
+  router.patch("/:id/admin-info", requireAdmin, updateAdminInfo);
   router.post("/:id/verify-payment", requireAdmin, verifyPayment);
 
   return router;

@@ -82,7 +82,7 @@ export async function createCoupon(req: Request, res: Response): Promise<void> {
   const parsed = createCouponSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
@@ -91,13 +91,13 @@ export async function createCoupon(req: Request, res: Response): Promise<void> {
 
   // Validate percentage range
   if (data.discountType === "percentage" && data.discountValue > 100) {
-    res.status(400).json(fail("VALIDATION_ERROR", "Percentage discount cannot exceed 100%"));
+    res.status(400).json(fail("Percentage discount cannot exceed 100%", "VALIDATION_ERROR"));
     return;
   }
 
   const existing = await Coupon.findOne({ code: data.code });
   if (existing) {
-    res.status(409).json(fail("CONFLICT", `Coupon "${data.code}" already exists`));
+    res.status(409).json(fail(`Coupon "${data.code}" already exists`, "CONFLICT"));
     return;
   }
 
@@ -124,7 +124,7 @@ export async function updateCoupon(req: Request, res: Response): Promise<void> {
   const parsed = updateCouponSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
@@ -132,7 +132,7 @@ export async function updateCoupon(req: Request, res: Response): Promise<void> {
   const data = parsed.data;
   const existing = await Coupon.findById(id);
   if (!existing) {
-    res.status(404).json(fail("NOT_FOUND", "Coupon not found"));
+    res.status(404).json(fail("Coupon not found", "NOT_FOUND"));
     return;
   }
 
@@ -140,7 +140,7 @@ export async function updateCoupon(req: Request, res: Response): Promise<void> {
   if (data.code && data.code !== existing.code) {
     const codeExists = await Coupon.exists({ code: data.code, _id: { $ne: id } });
     if (codeExists) {
-      res.status(409).json(fail("CONFLICT", `Coupon "${data.code}" already exists`));
+      res.status(409).json(fail(`Coupon "${data.code}" already exists`, "CONFLICT"));
       return;
     }
   }
@@ -162,7 +162,7 @@ export async function updateCoupon(req: Request, res: Response): Promise<void> {
   });
 
   if (!updated) {
-    res.status(404).json(fail("NOT_FOUND", "Coupon not found"));
+    res.status(404).json(fail("Coupon not found", "NOT_FOUND"));
     return;
   }
 
@@ -174,7 +174,7 @@ export async function deleteCoupon(req: Request, res: Response): Promise<void> {
 
   const coupon = await Coupon.findByIdAndDelete(id);
   if (!coupon) {
-    res.status(404).json(fail("NOT_FOUND", "Coupon not found"));
+    res.status(404).json(fail("Coupon not found", "NOT_FOUND"));
     return;
   }
 

@@ -16,10 +16,13 @@ export function CartItem({ item }: CartItemProps) {
   const dispatch = useAppDispatch();
 
   const lineTotal = item.unitPrice * item.quantity;
-  const lineDiscount =
+  const unitPricePaise = Math.round(item.unitPrice * 100);
+  const lineTotalPaise = unitPricePaise * item.quantity;
+  const lineDiscountPaise =
     item.discountType === 'percentage'
-      ? Math.round((lineTotal * item.discount) / 100)
-      : item.discount * item.quantity;
+      ? Math.round((lineTotalPaise * item.discount) / 100)
+      : Math.round(item.discount * 100) * item.quantity;
+  const lineDiscount = lineDiscountPaise / 100;
   const finalTotal = lineTotal - lineDiscount;
 
   return (

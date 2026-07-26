@@ -3,7 +3,7 @@ import { useStoreSettings } from '@/features/store/hooks/use-store-settings';
 export function StoreAboutPage() {
   const { data: settingsRes } = useStoreSettings();
   const settings = settingsRes?.data;
-  const storeName = settings?.storeName ?? 'Sagar General Store';
+  const storeName = settings?.storeName ?? '';
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
@@ -18,7 +18,7 @@ export function StoreAboutPage() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <h1 className="text-3xl font-extrabold text-white sm:text-4xl">{storeName}</h1>
-              <p className="mt-2 text-sm text-gray-300">Your Trusted Neighbourhood Grocery Store</p>
+              <p className="mt-2 text-sm text-gray-300">{settings?.storeDescription || ''}</p>
             </div>
           </div>
         </div>
@@ -31,10 +31,7 @@ export function StoreAboutPage() {
           <section className="rounded-2xl bg-surface p-6 ring-1 ring-gray-100 shadow-sm">
             <h2 className="text-xl font-bold text-foreground mb-4">About Our Store</h2>
             <p className="text-sm text-gray-600 leading-relaxed">
-              {settings?.storeDescription || 'Sagar General Store is your trusted neighbourhood grocery store, serving the community with fresh produce, daily essentials, and a wide range of products at honest prices. We believe in quality, affordability, and personalized service that keeps our customers coming back.'}
-            </p>
-            <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-              From fresh vegetables and fruits to packaged goods, dairy products, and household essentials - we stock everything you need for your daily shopping under one roof.
+              {settings?.storeDescription || ''}
             </p>
           </section>
 
@@ -112,7 +109,7 @@ export function StoreAboutPage() {
             <div className="flex h-48 items-center justify-center rounded-xl bg-gray-50 ring-1 ring-gray-100">
               <div className="text-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-300 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                <p className="text-xs text-gray-400">Map coming soon</p>
+                <p className="text-xs text-gray-400">Location not set</p>
               </div>
             </div>
           </div>

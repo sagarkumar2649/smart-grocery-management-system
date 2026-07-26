@@ -10,17 +10,35 @@ interface InvoicePreviewProps {
 }
 
 export function InvoicePreview({ invoiceId, onNewTransaction, onAfterPrint }: InvoicePreviewProps) {
-  const { data, isLoading } = usePOSInvoice(invoiceId);
+  const { data, isLoading, error } = usePOSInvoice(invoiceId);
   const emailInvoice = useEmailInvoice();
   const whatsappLink = useWhatsAppLink();
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [email, setEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
 
-  if (isLoading || !data?.data) {
+  if (isLoading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-600 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (error || !data?.data) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center">
+        <div className="text-center">
+          <p className="mb-2 text-sm font-medium text-red-600">
+            {error instanceof Error ? error.message : 'Failed to load invoice.'}
+          </p>
+          <button
+            onClick={onNewTransaction}
+            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-bold text-white hover:bg-teal-700"
+          >
+            New Bill (Alt+N)
+          </button>
+        </div>
       </div>
     );
   }

@@ -32,6 +32,11 @@ export function POSPage() {
 
   const searchRef = useRef<HTMLInputElement>(null);
 
+  const handleClearAll = useCallback(() => {
+    dispatch(clearPOSState());
+    setShowPayment(false);
+  }, [dispatch]);
+
   const handleNewTransaction = useCallback(() => {
     dispatch(clearPOSState());
     setCompletedInvoiceId(null);
@@ -115,6 +120,7 @@ export function POSPage() {
             onPay={() => {
               if (cartItems.length > 0) setShowPayment(true);
             }}
+            onClearAll={handleClearAll}
           />
         </div>
       </div>

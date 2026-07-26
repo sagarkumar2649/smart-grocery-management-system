@@ -33,11 +33,15 @@ const UserIcon = ({ className }: { className?: string }) => (
 const LogOutIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
 );
+const ClipboardListIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
+);
 
 const navLinks = [
   { name: 'Home', href: '/store', icon: HomeIcon },
   { name: 'Products', href: '/store/products', icon: PackageIcon },
   { name: 'Categories', href: '/store/categories', icon: GridIcon },
+  { name: 'My Orders', href: '/store/orders', icon: ClipboardListIcon },
   { name: 'About', href: '/store/about', icon: null },
 ];
 
@@ -47,7 +51,7 @@ export function CustomerNavbar() {
   const { user } = useUser();
   const cartCount = useAppSelector(selectCartCount);
   const { data: settingsRes } = useStoreSettings();
-  const storeName = settingsRes?.data?.storeName ?? 'Sagar General Store';
+  const storeName = settingsRes?.data?.storeName ?? '';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -80,7 +84,6 @@ export function CustomerNavbar() {
           </div>
           <div className="flex items-center gap-4">
             <Link to="/store/about" className="hover:text-white transition-colors">About Us</Link>
-            <Link to="/store/orders" className="hover:text-white transition-colors">My Orders</Link>
           </div>
         </div>
       </div>
@@ -94,12 +97,12 @@ export function CustomerNavbar() {
               <img src={settingsRes.data.logo.url} alt={storeName} className="h-9 w-9 rounded-lg object-cover" />
             ) : (
               <div className="h-9 w-9 rounded-lg bg-gray-900 flex items-center justify-center">
-                <span className="text-sm font-bold text-white">SS</span>
+                <span className="text-sm font-bold text-white">{storeName?.charAt(0) ?? 'S'}</span>
               </div>
             )}
             <div className="hidden sm:block">
               <span className="block text-base font-bold text-foreground leading-tight">{storeName}</span>
-              <span className="block text-[10px] font-medium text-gray-500 uppercase tracking-wider">Grocery & Essentials</span>
+              <span className="block text-[10px] font-medium text-gray-500 uppercase tracking-wider">{settingsRes?.data?.storeDescription ? '' : ''}</span>
             </div>
           </Link>
 
@@ -242,13 +245,6 @@ export function CustomerNavbar() {
                 </Link>
               );
             })}
-            <Link
-              to="/store/orders"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              My Orders
-            </Link>
             <Link
               to="/store/profile"
               onClick={() => setMobileOpen(false)}

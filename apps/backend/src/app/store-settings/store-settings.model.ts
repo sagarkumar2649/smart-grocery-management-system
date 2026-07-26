@@ -46,7 +46,7 @@ const storeSettingsSchema = new Schema<IStoreSettings>(
       type: String,
       required: true,
       trim: true,
-      default: "Sagar General Store",
+      default: "",
     },
     storeDescription: {
       type: String,
@@ -71,7 +71,7 @@ const storeSettingsSchema = new Schema<IStoreSettings>(
     openingHours: {
       type: String,
       trim: true,
-      default: "Mon-Sun: 8:00 AM - 10:00 PM",
+      default: "",
     },
     storeEmail: {
       type: String,

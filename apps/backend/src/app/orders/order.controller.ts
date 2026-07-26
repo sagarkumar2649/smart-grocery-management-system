@@ -91,8 +91,9 @@ const createOrderSchema = z.object({
 });
 
 const updateOrderStatusSchema = z.object({
-  orderStatus: z.enum(["placed", "confirmed", "processing", "shipped", "delivered", "cancelled"]),
+  orderStatus: z.enum(["placed", "confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled"]),
   cancelReason: z.string().max(500).optional(),
+  note: z.string().max(500).optional(),
 });
 
 const cancelOrderSchema = z.object({
@@ -101,6 +102,13 @@ const cancelOrderSchema = z.object({
 
 const verifyPaymentSchema = z.object({
   action: z.enum(["approve", "reject"]),
+});
+
+const updateAdminInfoSchema = z.object({
+  trackingNumber: z.string().max(200).optional(),
+  deliveryPartner: z.string().max(200).optional(),
+  estimatedDeliveryDate: z.string().optional(),
+  internalNotes: z.string().max(2000).optional(),
 });
 
 // ── Customer Controllers ─────────────────────────────────────────────────────
@@ -236,6 +244,7 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
       paymentStatus,
       orderStatus: "placed",
       notes: data.notes,
+      statusHistory: [{ status: "placed", timestamp: new Date() }],
     });
 
     // Update customer profile stats
@@ -329,8 +338,8 @@ export async function cancelMyOrder(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  if (!["placed", "confirmed"].includes(order.orderStatus)) {
-    res.status(400).json(fail("Only placed or confirmed orders can be cancelled", "VALIDATION_ERROR"));
+  if (order.orderStatus !== "placed") {
+    res.status(400).json(fail("Only pending orders can be cancelled", "VALIDATION_ERROR"));
     return;
   }
 
@@ -466,8 +475,10 @@ export async function updateOrderStatus(req: Request, res: Response): Promise<vo
   const validTransitions: Record<string, string[]> = {
     placed: ["confirmed", "cancelled"],
     confirmed: ["processing", "cancelled"],
-    processing: ["shipped", "cancelled"],
-    shipped: ["delivered"],
+    processing: ["packed", "cancelled"],
+    packed: ["shipped", "out_for_delivery", "cancelled"],
+    shipped: ["out_for_delivery", "delivered"],
+    out_for_delivery: ["delivered"],
     delivered: [],
     cancelled: [],
   };
@@ -533,6 +544,13 @@ export async function updateOrderStatus(req: Request, res: Response): Promise<vo
       order.cancelReason = parsed.data.cancelReason;
     }
 
+    // Append to status history
+    order.statusHistory.push({
+      status: parsed.data.orderStatus,
+      timestamp: new Date(),
+      ...(parsed.data.note ? { note: parsed.data.note } : {}),
+    });
+
     await order.save();
 
     res.status(200).json(ok(formatOrder(order)));
@@ -574,6 +592,55 @@ export async function verifyPayment(req: Request, res: Response): Promise<void> 
   res.status(200).json(ok(formatOrder(order)));
 }
 
+export async function updateAdminInfo(req: Request, res: Response): Promise<void> {
+  const { id } = req.params as { id: string };
+  const parsed = updateAdminInfoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json(fail("Invalid input", "VALIDATION_ERROR"));
+    return;
+  }
+
+  const order = await Order.findById(id);
+  if (!order) {
+    res.status(404).json(fail("Order not found", "NOT_FOUND"));
+    return;
+  }
+
+  const updates = parsed.data;
+
+  const setFields: Record<string, unknown> = {};
+  const unsetFields: Record<string, 1> = {};
+
+  if (updates.trackingNumber !== undefined) {
+    if (updates.trackingNumber) setFields.trackingNumber = updates.trackingNumber;
+    else unsetFields.trackingNumber = 1;
+  }
+  if (updates.deliveryPartner !== undefined) {
+    if (updates.deliveryPartner) setFields.deliveryPartner = updates.deliveryPartner;
+    else unsetFields.deliveryPartner = 1;
+  }
+  if (updates.estimatedDeliveryDate !== undefined) {
+    if (updates.estimatedDeliveryDate) setFields.estimatedDeliveryDate = new Date(updates.estimatedDeliveryDate);
+    else unsetFields.estimatedDeliveryDate = 1;
+  }
+  if (updates.internalNotes !== undefined) {
+    if (updates.internalNotes) setFields.internalNotes = updates.internalNotes;
+    else unsetFields.internalNotes = 1;
+  }
+
+  const updateOps: Record<string, unknown> = {};
+  if (Object.keys(setFields).length > 0) updateOps.$set = setFields;
+  if (Object.keys(unsetFields).length > 0) updateOps.$unset = unsetFields;
+
+  const updated = await Order.findByIdAndUpdate(id, updateOps, { new: true });
+  if (!updated) {
+    res.status(404).json(fail("Order not found", "NOT_FOUND"));
+    return;
+  }
+
+  res.status(200).json(ok(formatOrder(updated)));
+}
+
 export async function getOrderStats(_req: Request, res: Response): Promise<void> {
   const stats = await Order.aggregate([
     {
@@ -582,7 +649,7 @@ export async function getOrderStats(_req: Request, res: Response): Promise<void>
         totalOrders: { $sum: 1 },
         totalRevenue: { $sum: "$grandTotal" },
         pendingOrders: {
-          $sum: { $cond: [{ $in: ["$orderStatus", ["placed", "confirmed", "processing"]] }, 1, 0] },
+          $sum: { $cond: [{ $in: ["$orderStatus", ["placed", "confirmed", "processing", "packed", "shipped", "out_for_delivery"]] }, 1, 0] },
         },
         deliveredOrders: {
           $sum: { $cond: [{ $eq: ["$orderStatus", "delivered"] }, 1, 0] },

@@ -374,7 +374,7 @@ export async function adjustStock(
   const parsed = adjustStockSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
@@ -384,7 +384,7 @@ export async function adjustStock(
 
   const product = await Product.findById(productId);
   if (!product) {
-    res.status(404).json(fail("NOT_FOUND", "Product not found"));
+    res.status(404).json(fail("Product not found", "NOT_FOUND"));
     return;
   }
 
@@ -429,7 +429,7 @@ export async function purchaseStock(
   const parsed = purchaseStockSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
@@ -439,7 +439,7 @@ export async function purchaseStock(
 
   const product = await Product.findById(productId);
   if (!product) {
-    res.status(404).json(fail("NOT_FOUND", "Product not found"));
+    res.status(404).json(fail("Product not found", "NOT_FOUND"));
     return;
   }
 
@@ -473,7 +473,7 @@ export async function reportDamagedStock(
   const parsed = adjustStockSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
@@ -482,13 +482,13 @@ export async function reportDamagedStock(
 
   const product = await Product.findById(productId);
   if (!product) {
-    res.status(404).json(fail("NOT_FOUND", "Product not found"));
+    res.status(404).json(fail("Product not found", "NOT_FOUND"));
     return;
   }
 
   if (Math.abs(quantity) > product.stock) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", `Cannot mark ${Math.abs(quantity)} items as damaged. Only ${product.stock} in stock.`),
+      fail(`Cannot mark ${Math.abs(quantity)} items as damaged. Only ${product.stock} in stock.`, "VALIDATION_ERROR"),
     );
     return;
   }
@@ -542,7 +542,7 @@ export async function updateProductStockSettings(
   const parsed = adjustProductSettingsSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
@@ -553,7 +553,7 @@ export async function updateProductStockSettings(
   });
 
   if (!product) {
-    res.status(404).json(fail("NOT_FOUND", "Product not found"));
+    res.status(404).json(fail("Product not found", "NOT_FOUND"));
     return;
   }
 

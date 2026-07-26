@@ -31,6 +31,9 @@ const CheckCircleIcon = () => (
 const ClockIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
 );
+const BoxIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+);
 const ShoppingBagIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
 );
@@ -39,7 +42,9 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string; icon: Rea
   placed: { label: 'Order Placed', cls: 'text-blue-600 bg-blue-50', icon: <ClockIcon /> },
   confirmed: { label: 'Confirmed', cls: 'text-indigo-600 bg-indigo-50', icon: <CheckCircleIcon /> },
   processing: { label: 'Processing', cls: 'text-purple-600 bg-purple-50', icon: <ClockIcon /> },
+  packed: { label: 'Packed', cls: 'text-cyan-600 bg-cyan-50', icon: <BoxIcon /> },
   shipped: { label: 'Shipped', cls: 'text-amber-600 bg-amber-50', icon: <TruckIcon /> },
+  out_for_delivery: { label: 'Out for Delivery', cls: 'text-orange-600 bg-orange-50', icon: <TruckIcon /> },
   delivered: { label: 'Delivered', cls: 'text-green-600 bg-green-50', icon: <CheckCircleIcon /> },
   cancelled: { label: 'Cancelled', cls: 'text-red-600 bg-red-50', icon: <PackageIcon /> },
 };
@@ -48,21 +53,32 @@ const FILTER_TABS: { label: string; value: string }[] = [
   { label: 'All', value: '' },
   { label: 'Placed', value: 'placed' },
   { label: 'Confirmed', value: 'confirmed' },
+  { label: 'Processing', value: 'processing' },
   { label: 'Shipped', value: 'shipped' },
   { label: 'Delivered', value: 'delivered' },
   { label: 'Cancelled', value: 'cancelled' },
 ];
 
+const TIMELINE_STEPS: { status: OrderStatus; label: string }[] = [
+  { status: 'placed', label: 'Order Placed' },
+  { status: 'confirmed', label: 'Confirmed' },
+  { status: 'processing', label: 'Processing' },
+  { status: 'packed', label: 'Packed' },
+  { status: 'shipped', label: 'Shipped' },
+  { status: 'out_for_delivery', label: 'Out for Delivery' },
+  { status: 'delivered', label: 'Delivered' },
+];
+
 function TrackingBar({ order }: { order: Order }) {
-  const steps = ['placed', 'confirmed', 'processing', 'shipped', 'delivered'];
+  const steps = ['placed', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
   const currentIdx = steps.indexOf(order.orderStatus);
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       {steps.map((step, i) => (
         <div key={step} className="flex items-center">
           <div
-            className={`h-2 w-8 rounded-full transition-colors ${
+            className={`h-1.5 flex-1 min-w-[12px] rounded-full transition-colors ${
               i <= currentIdx && order.orderStatus !== 'cancelled'
                 ? 'bg-teal-500'
                 : 'bg-gray-200'
@@ -74,12 +90,70 @@ function TrackingBar({ order }: { order: Order }) {
   );
 }
 
+function OrderTimeline({ order }: { order: Order }) {
+  const currentIdx = TIMELINE_STEPS.findIndex((s) => s.status === order.orderStatus);
+  const isCancelled = order.orderStatus === 'cancelled';
+
+  return (
+    <div className="space-y-0">
+      {TIMELINE_STEPS.map((step, i) => {
+        const isCompleted = !isCancelled && currentIdx >= i;
+        const isCurrent = !isCancelled && currentIdx === i;
+        const historyEntry = order.statusHistory?.find((h) => h.status === step.status);
+
+        return (
+          <div key={step.status} className="flex items-start gap-2.5">
+            <div className="flex flex-col items-center">
+              <div
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                  isCompleted
+                    ? 'bg-green-500 text-white'
+                    : isCurrent
+                    ? 'bg-teal-500 text-white ring-2 ring-teal-200'
+                    : 'bg-gray-200 text-gray-400'
+                }`}
+              >
+                {isCompleted ? '✓' : ''}
+              </div>
+              {i < TIMELINE_STEPS.length - 1 && (
+                <div className={`w-0.5 h-5 ${isCompleted && !isCurrent ? 'bg-green-400' : 'bg-gray-200'}`} />
+              )}
+            </div>
+            <div className="pb-3">
+              <p className={`text-xs font-medium ${isCompleted ? 'text-foreground' : 'text-gray-400'}`}>
+                {step.label}
+              </p>
+              {historyEntry && (
+                <p className="text-[10px] text-gray-400">
+                  {new Date(historyEntry.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      {isCancelled && (
+        <div className="flex items-start gap-2.5">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">✕</div>
+          <div>
+            <p className="text-xs font-medium text-red-600">Cancelled</p>
+            {order.cancelReason && (
+              <p className="text-[10px] text-red-500">{order.cancelReason}</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function StoreMyOrdersPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [timelineId, setTimelineId] = useState<string | null>(null);
 
   const { data: ordersRes, isLoading } = useMyOrders({ page, limit: 10, status: statusFilter });
   const cancelOrderMutation = useCancelOrder();
@@ -133,15 +207,15 @@ export function StoreMyOrdersPage() {
           <div className="text-gray-200">
             <ShoppingBagIcon />
           </div>
-          <p className="text-sm text-gray-400">No orders found</p>
-          <p className="text-xs text-gray-300">
-            {statusFilter ? 'Try a different filter' : 'Your order history will appear here'}
+          <p className="text-sm font-medium text-gray-500">No orders yet.</p>
+          <p className="text-xs text-gray-400">
+            Start shopping to place your first order.
           </p>
           <Link
             to="/store/products"
             className="mt-2 rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-teal-800"
           >
-            Start Shopping
+            Shop Now
           </Link>
         </div>
       ) : (
@@ -150,6 +224,7 @@ export function StoreMyOrdersPage() {
             const statusConfig = STATUS_CONFIG[order.orderStatus];
             const isExpanded = expandedId === order._id;
             const isCancelling = cancelId === order._id;
+            const showTimeline = timelineId === order._id;
 
             return (
               <div
@@ -175,10 +250,22 @@ export function StoreMyOrdersPage() {
                 {/* Items Preview */}
                 <div className="border-t border-gray-100 pt-3">
                   {order.items.slice(0, isExpanded ? undefined : 2).map((item, i) => (
-                    <div key={i} className="flex items-center justify-between py-1">
-                      <p className="text-sm text-gray-700">
-                        {item.name} <span className="text-gray-400">x{item.quantity}</span>
-                      </p>
+                    <div key={i} className="flex items-center gap-3 py-1.5">
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="h-10 w-10 rounded-lg object-cover ring-1 ring-gray-100"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
+                          <PackageIcon />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                        <p className="text-xs text-gray-500">Qty: {item.quantity} × {formatINR(item.unitPrice)}</p>
+                      </div>
                       <p className="text-sm font-medium text-foreground">
                         {formatINR(item.total)}
                       </p>
@@ -213,17 +300,27 @@ export function StoreMyOrdersPage() {
                       order.paymentStatus === 'pending' ? 'bg-amber-50 text-amber-600' :
                       'bg-red-50 text-red-600'
                     }`}>
-                      {order.paymentMethod === 'cod' ? 'COD' : order.paymentStatus === 'pending_verification' ? 'Pending Verification' : order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                      {order.paymentStatus === 'pending_verification' ? 'Pending Verification' : order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                    </span>
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      {order.paymentMethod === 'cod' ? 'COD' : order.paymentMethod === 'upi' ? 'UPI' : order.paymentMethod === 'razorpay' ? 'Razorpay' : order.paymentMethod === 'qr' ? 'QR' : order.paymentMethod}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTimelineId(showTimeline ? null : order._id)}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      {showTimeline ? 'Hide Timeline' : 'Timeline'}
+                    </button>
                     <Link
                       to={`/store/orders/${order._id}`}
                       className="text-xs font-medium text-primary hover:text-teal-800 transition-colors"
                     >
                       View Details
                     </Link>
-                    {['placed', 'confirmed'].includes(order.orderStatus) && (
+                    {order.orderStatus === 'placed' && (
                       <button
                         type="button"
                         onClick={() => setCancelId(isCancelling ? null : order._id)}
@@ -234,6 +331,14 @@ export function StoreMyOrdersPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Timeline */}
+                {showTimeline && (
+                  <div className="mt-3 border-t border-gray-100 pt-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Order Timeline</p>
+                    <OrderTimeline order={order} />
+                  </div>
+                )}
 
                 {/* Cancel Form */}
                 {isCancelling && (

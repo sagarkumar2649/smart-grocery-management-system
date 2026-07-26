@@ -104,7 +104,7 @@ export async function getCustomer(req: Request, res: Response): Promise<void> {
     .lean();
 
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer not found"));
+    res.status(404).json(fail("Customer not found", "NOT_FOUND"));
     return;
   }
 
@@ -123,8 +123,8 @@ export async function adminUpdateCustomer(
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -137,7 +137,7 @@ export async function adminUpdateCustomer(
   }).lean();
 
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer not found"));
+    res.status(404).json(fail("Customer not found", "NOT_FOUND"));
     return;
   }
 
@@ -156,8 +156,8 @@ export async function updateCustomerStatus(
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -171,7 +171,7 @@ export async function updateCustomerStatus(
   ).lean();
 
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer not found"));
+    res.status(404).json(fail("Customer not found", "NOT_FOUND"));
     return;
   }
 
@@ -190,8 +190,8 @@ export async function updateCustomerNotes(
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -205,7 +205,7 @@ export async function updateCustomerNotes(
   ).lean();
 
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer not found"));
+    res.status(404).json(fail("Customer not found", "NOT_FOUND"));
     return;
   }
 
@@ -222,7 +222,7 @@ export async function deleteCustomer(
 
   const customer = await CustomerProfile.findByIdAndDelete(id);
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer not found"));
+    res.status(404).json(fail("Customer not found", "NOT_FOUND"));
     return;
   }
 
@@ -240,7 +240,7 @@ export async function getMyProfile(
 ): Promise<void> {
   const clerkId = (req as AuthenticatedRequest).auth?.userId;
   if (!clerkId) {
-    res.status(401).json(fail("UNAUTHORIZED", "Not authenticated"));
+    res.status(401).json(fail("Not authenticated", "UNAUTHORIZED"));
     return;
   }
 
@@ -249,7 +249,7 @@ export async function getMyProfile(
     .lean();
 
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer profile not found"));
+    res.status(404).json(fail("Customer profile not found", "NOT_FOUND"));
     return;
   }
 
@@ -270,7 +270,7 @@ export async function updateMyProfile(
 ): Promise<void> {
   const clerkId = (req as AuthenticatedRequest).auth?.userId;
   if (!clerkId) {
-    res.status(401).json(fail("UNAUTHORIZED", "Not authenticated"));
+    res.status(401).json(fail("Not authenticated", "UNAUTHORIZED"));
     return;
   }
 
@@ -278,8 +278,8 @@ export async function updateMyProfile(
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -293,7 +293,7 @@ export async function updateMyProfile(
   ).lean();
 
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer profile not found"));
+    res.status(404).json(fail("Customer profile not found", "NOT_FOUND"));
     return;
   }
 
@@ -308,7 +308,7 @@ export async function addAddress(
 ): Promise<void> {
   const clerkId = (req as AuthenticatedRequest).auth?.userId;
   if (!clerkId) {
-    res.status(401).json(fail("UNAUTHORIZED", "Not authenticated"));
+    res.status(401).json(fail("Not authenticated", "UNAUTHORIZED"));
     return;
   }
 
@@ -316,8 +316,8 @@ export async function addAddress(
   if (!parsed.success) {
     res.status(400).json(
       fail(
-        "VALIDATION_ERROR",
         "Invalid input",
+        "VALIDATION_ERROR",
         parsed.error.flatten().fieldErrors as Record<string, unknown>,
       ),
     );
@@ -326,7 +326,7 @@ export async function addAddress(
 
   const customer = await CustomerProfile.findOne({ clerkId });
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer profile not found"));
+    res.status(404).json(fail("Customer profile not found", "NOT_FOUND"));
     return;
   }
 
@@ -362,7 +362,7 @@ export async function removeAddress(
 ): Promise<void> {
   const clerkId = (req as AuthenticatedRequest).auth?.userId;
   if (!clerkId) {
-    res.status(401).json(fail("UNAUTHORIZED", "Not authenticated"));
+    res.status(401).json(fail("Not authenticated", "UNAUTHORIZED"));
     return;
   }
 
@@ -370,7 +370,7 @@ export async function removeAddress(
 
   const customer = await CustomerProfile.findOne({ clerkId });
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer profile not found"));
+    res.status(404).json(fail("Customer profile not found", "NOT_FOUND"));
     return;
   }
 
@@ -378,7 +378,7 @@ export async function removeAddress(
     (a) => (a as unknown as { _id?: { toString(): string } })._id?.toString() === addressId,
   );
   if (addressIndex === -1) {
-    res.status(404).json(fail("NOT_FOUND", "Address not found"));
+    res.status(404).json(fail("Address not found", "NOT_FOUND"));
     return;
   }
 
@@ -396,7 +396,7 @@ export async function toggleWishlist(
 ): Promise<void> {
   const clerkId = (req as AuthenticatedRequest).auth?.userId;
   if (!clerkId) {
-    res.status(401).json(fail("UNAUTHORIZED", "Not authenticated"));
+    res.status(401).json(fail("Not authenticated", "UNAUTHORIZED"));
     return;
   }
 
@@ -404,7 +404,7 @@ export async function toggleWishlist(
 
   const customer = await CustomerProfile.findOne({ clerkId });
   if (!customer) {
-    res.status(404).json(fail("NOT_FOUND", "Customer profile not found"));
+    res.status(404).json(fail("Customer profile not found", "NOT_FOUND"));
     return;
   }
 

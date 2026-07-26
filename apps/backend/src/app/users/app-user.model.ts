@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export type AppUserRole = 'ADMIN' | 'CUSTOMER';
 
-export const ADMIN_EMAIL = 'ss5375492@gmail.com';
+export const ADMIN_EMAIL = process.env["ADMIN_EMAIL"] ?? "";
 
 export interface IAppUser extends Document {
   clerkId: string;

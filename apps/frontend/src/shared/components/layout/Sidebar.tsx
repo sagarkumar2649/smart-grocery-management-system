@@ -82,7 +82,7 @@ export function Sidebar() {
       <div className="flex h-16 items-center justify-between px-4">
         {!isCollapsed && (
           <span className="text-xl font-bold tracking-tight text-primary truncate">
-            SmartAdmin
+            Smart Inventory
           </span>
         )}
         <button

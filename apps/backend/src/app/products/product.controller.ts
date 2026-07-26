@@ -115,7 +115,7 @@ export async function getProduct(req: Request, res: Response): Promise<void> {
 
   const product = await Product.findById(id).populate("category", "name slug").lean();
   if (!product) {
-    res.status(404).json(fail("NOT_FOUND", "Product not found"));
+    res.status(404).json(fail("Product not found", "NOT_FOUND"));
     return;
   }
 
@@ -126,7 +126,7 @@ export async function createProduct(req: Request, res: Response): Promise<void> 
   const parsed = productBodySchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
@@ -136,14 +136,14 @@ export async function createProduct(req: Request, res: Response): Promise<void> 
   // Validate category exists
   const categoryExists = await Category.exists({ _id: data.category });
   if (!categoryExists) {
-    res.status(400).json(fail("VALIDATION_ERROR", "Category not found"));
+    res.status(400).json(fail("Category not found", "VALIDATION_ERROR"));
     return;
   }
 
   // Check SKU uniqueness
   const skuExists = await Product.exists({ sku: data.sku });
   if (skuExists) {
-    res.status(409).json(fail("CONFLICT", `SKU "${data.sku}" already exists`));
+    res.status(409).json(fail(`SKU "${data.sku}" already exists`, "CONFLICT"));
     return;
   }
 
@@ -172,7 +172,7 @@ export async function updateProduct(req: Request, res: Response): Promise<void> 
   const parsed = productBodySchema.partial().safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(
-      fail("VALIDATION_ERROR", "Invalid input", parsed.error.flatten().fieldErrors as Record<string, unknown>),
+      fail("Invalid input", "VALIDATION_ERROR", parsed.error.flatten().fieldErrors as Record<string, unknown>),
     );
     return;
   }
@@ -180,7 +180,7 @@ export async function updateProduct(req: Request, res: Response): Promise<void> 
   const data = parsed.data;
   const existing = await Product.findById(id);
   if (!existing) {
-    res.status(404).json(fail("NOT_FOUND", "Product not found"));
+    res.status(404).json(fail("Product not found", "NOT_FOUND"));
     return;
   }
 
@@ -188,7 +188,7 @@ export async function updateProduct(req: Request, res: Response): Promise<void> 
   if (data.category) {
     const categoryExists = await Category.exists({ _id: data.category });
     if (!categoryExists) {
-      res.status(400).json(fail("VALIDATION_ERROR", "Category not found"));
+      res.status(400).json(fail("Category not found", "VALIDATION_ERROR"));
       return;
     }
   }
@@ -197,7 +197,7 @@ export async function updateProduct(req: Request, res: Response): Promise<void> 
   if (data.sku && data.sku !== existing.sku) {
     const skuExists = await Product.exists({ sku: data.sku, _id: { $ne: id } });
     if (skuExists) {
-      res.status(409).json(fail("CONFLICT", `SKU "${data.sku}" already exists`));
+      res.status(409).json(fail(`SKU "${data.sku}" already exists`, "CONFLICT"));
       return;
     }
   }
@@ -227,7 +227,7 @@ export async function updateProduct(req: Request, res: Response): Promise<void> 
   }).populate("category", "name slug");
 
   if (!updated) {
-    res.status(404).json(fail("NOT_FOUND", "Product not found"));
+    res.status(404).json(fail("Product not found", "NOT_FOUND"));
     return;
   }
 
@@ -239,7 +239,7 @@ export async function deleteProduct(req: Request, res: Response): Promise<void> 
 
   const product = await Product.findByIdAndDelete(id);
   if (!product) {
-    res.status(404).json(fail("NOT_FOUND", "Product not found"));
+    res.status(404).json(fail("Product not found", "NOT_FOUND"));
     return;
   }
 

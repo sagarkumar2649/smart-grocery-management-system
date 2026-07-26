@@ -11,7 +11,7 @@ import { logger } from '../../core/logging/logger.js';
  * Upserts an AppUser document keyed on the Clerk userId.
  *
  * Role assignment (permanent — never changes after first creation):
- *   ss5375492@gmail.com  → ADMIN
+ *   ADMIN_EMAIL env var   → ADMIN
  *   everyone else        → CUSTOMER
  *
  * Requires: requireAuth middleware (Clerk JWT).
