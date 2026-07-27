@@ -89,6 +89,15 @@ export interface CouponValidation {
   calculatedDiscount: number;
 }
 
+export interface OrderTotals {
+  subtotal: number;
+  totalItemDiscount: number;
+  billDiscount: number;
+  couponDiscount: number;
+  totalGST: number;
+  grandTotal: number;
+}
+
 export interface POSPagination {
   page: number;
   limit: number;
@@ -126,6 +135,14 @@ export async function checkout(
 ): Promise<{ data: POSInvoice }> {
   const client = createAuthedClient(getToken);
   return client.post('/pos/checkout', payload);
+}
+
+export async function calculateOrder(
+  payload: Omit<CheckoutPayload, 'payments'>,
+  getToken: GetToken,
+): Promise<{ data: OrderTotals }> {
+  const client = createAuthedClient(getToken);
+  return client.post('/pos/calculate', payload);
 }
 
 export async function listPOSInvoices(

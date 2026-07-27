@@ -4,6 +4,7 @@ import {
   searchPOSProducts,
   getProductByBarcode,
   checkout,
+  calculateOrder,
   listInvoices,
   getInvoice,
   downloadInvoicePDF,
@@ -20,6 +21,7 @@ export function buildPOSRouter(): Router {
 
   router.get("/products", searchPOSProducts);
   router.get("/products/barcode/:barcode", getProductByBarcode);
+  router.post("/calculate", calculateOrder);
   router.post("/checkout", checkout);
   router.get("/invoices", listInvoices);
   router.get("/invoices/:id", getInvoice);

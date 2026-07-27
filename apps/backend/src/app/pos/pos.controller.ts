@@ -103,6 +103,13 @@ const validateCouponSchema = z.object({
   subtotal: z.number().nonnegative(),
 });
 
+const calculateSchema = z.object({
+  items: z.array(checkoutItemSchema).min(1, "At least one item required"),
+  discount: z.number().nonnegative().optional(),
+  discountType: z.enum(["percentage", "flat"]).optional(),
+  couponCode: z.string().max(30).optional(),
+});
+
 const voidSchema = z.object({
   reason: z.string().min(1, "Reason is required").max(500),
 });
@@ -110,6 +117,123 @@ const voidSchema = z.object({
 const emailSchema = z.object({
   email: z.string().email("Valid email required"),
 });
+
+// ── Order Calculation (shared by /calculate and /checkout) ───────────────────
+
+interface CalculateInput {
+  items: { productId: string; quantity: number; discount?: number | undefined; discountType?: "percentage" | "flat" | undefined }[];
+  discount?: number | undefined;
+  discountType?: "percentage" | "flat" | undefined;
+  couponCode?: string | undefined;
+}
+
+interface CalculatedTotals {
+  subtotal: number;
+  totalItemDiscount: number;
+  billDiscount: number;
+  couponDiscount: number;
+  totalGST: number;
+  grandTotal: number;
+  items: {
+    productId: string;
+    name: string;
+    sku: string;
+    quantity: number;
+    unitPrice: number;
+    discount: number;
+    discountType: string;
+    gstPercent: number;
+    gstAmount: number;
+    total: number;
+  }[];
+}
+
+async function calculateOrderTotals(input: CalculateInput): Promise<CalculatedTotals> {
+  const productIds = input.items.map((item) => new mongoose.Types.ObjectId(item.productId));
+  const products = await Product.find({ _id: { $in: productIds } }).lean();
+  const productMap = new Map(products.map((p) => [String(p._id), p]));
+
+  let subtotal = 0;
+  let totalItemDiscount = 0;
+  let totalGST = 0;
+
+  const calculatedItems = input.items.map((item) => {
+    const product = productMap.get(item.productId);
+    if (!product) {
+      throw new Error(`Product not found: ${item.productId}`);
+    }
+    if (product.stock < item.quantity) {
+      throw new Error(`Insufficient stock for "${product.name}": available ${product.stock}, requested ${item.quantity}`);
+    }
+
+    const unitPrice = product.sellingPrice;
+    const lineTotalBeforeDiscount = unitPrice * item.quantity;
+
+    let lineDiscount = rupeesToPaise(item.discount ?? 0) * item.quantity;
+    if (item.discountType === "percentage" && item.discount) {
+      lineDiscount = Math.round(lineTotalBeforeDiscount * (item.discount / 100));
+    }
+
+    const taxableAmount = lineTotalBeforeDiscount - lineDiscount;
+    const gstAmount = Math.round(taxableAmount * (product.gstPercent / 100));
+
+    subtotal += lineTotalBeforeDiscount;
+    totalItemDiscount += lineDiscount;
+    totalGST += gstAmount;
+
+    return {
+      productId: item.productId,
+      name: product.name,
+      sku: product.sku,
+      quantity: item.quantity,
+      unitPrice,
+      discount: lineDiscount,
+      discountType: item.discountType ?? "flat",
+      gstPercent: product.gstPercent,
+      gstAmount,
+      total: taxableAmount + gstAmount,
+    };
+  });
+
+  let billDiscount = rupeesToPaise(input.discount ?? 0);
+  if (input.discountType === "percentage" && input.discount) {
+    billDiscount = Math.round(subtotal * (input.discount / 100));
+  }
+
+  let couponDiscount = 0;
+  if (input.couponCode) {
+    const coupon = await Coupon.findOne({
+      code: input.couponCode.trim().toUpperCase(),
+      isActive: true,
+    }).lean();
+
+    if (coupon) {
+      const afterItemDiscount = subtotal - totalItemDiscount;
+      if (afterItemDiscount >= coupon.minOrderAmount) {
+        if (coupon.discountType === "percentage") {
+          couponDiscount = Math.round(afterItemDiscount * (coupon.discountValue / 100));
+          if (coupon.maxDiscountAmount > 0 && couponDiscount > coupon.maxDiscountAmount) {
+            couponDiscount = coupon.maxDiscountAmount;
+          }
+        } else {
+          couponDiscount = Math.min(coupon.discountValue, afterItemDiscount);
+        }
+      }
+    }
+  }
+
+  const grandTotal = subtotal - totalItemDiscount - billDiscount - couponDiscount + totalGST;
+
+  return {
+    subtotal,
+    totalItemDiscount,
+    billDiscount,
+    couponDiscount,
+    totalGST,
+    grandTotal: Math.max(0, grandTotal),
+    items: calculatedItems,
+  };
+}
 
 // ── Controllers ──────────────────────────────────────────────────────────────
 
@@ -216,69 +340,10 @@ export async function checkout(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Fetch all products in one query
-    const productIds = data.items.map((item) => new mongoose.Types.ObjectId(item.productId));
-    const products = await Product.find({ _id: { $in: productIds } }).lean();
-    const productMap = new Map(products.map((p) => [String(p._id), p]));
+    // Use shared calculation logic
+    const totals = await calculateOrderTotals(data);
 
-    // Validate items and calculate totals
-    let subtotal = 0;
-    let totalItemDiscount = 0;
-    let totalGST = 0;
-    let cgstTotal = 0;
-    let sgstTotal = 0;
-
-    const invoiceItems = data.items.map((item) => {
-      const product = productMap.get(item.productId);
-      if (!product) {
-        throw new Error(`Product not found: ${item.productId}`);
-      }
-      if (product.stock < item.quantity) {
-        throw new Error(`Insufficient stock for "${product.name}": available ${product.stock}, requested ${item.quantity}`);
-      }
-
-      const unitPrice = product.sellingPrice;
-      const lineTotalBeforeDiscount = unitPrice * item.quantity;
-
-      let lineDiscount = rupeesToPaise(item.discount ?? 0) * item.quantity;
-      if (item.discountType === "percentage" && item.discount) {
-        lineDiscount = Math.round(lineTotalBeforeDiscount * (item.discount / 100));
-      }
-
-      const taxableAmount = lineTotalBeforeDiscount - lineDiscount;
-      const gstAmount = Math.round(taxableAmount * (product.gstPercent / 100));
-      const lineTotal = taxableAmount + gstAmount;
-
-      subtotal += lineTotalBeforeDiscount;
-      totalItemDiscount += lineDiscount;
-      totalGST += gstAmount;
-
-      const halfGST = Math.round(gstAmount / 2);
-      cgstTotal += halfGST;
-      sgstTotal += gstAmount - halfGST;
-
-      return {
-        product: product._id,
-        name: product.name,
-        sku: product.sku,
-        quantity: item.quantity,
-        unitPrice,
-        discount: lineDiscount,
-        discountType: item.discountType ?? "flat",
-        gstPercent: product.gstPercent,
-        gstAmount,
-        total: lineTotal,
-      };
-    });
-
-    // Apply bill-level discount
-    let billDiscount = rupeesToPaise(data.discount ?? 0);
-    if (data.discountType === "percentage" && data.discount) {
-      billDiscount = Math.round(subtotal * (data.discount / 100));
-    }
-
-    // Apply coupon
-    let couponDiscount = 0;
+    // Strict coupon validation for checkout (calculateOrderTotals silently skips invalid coupons)
     let couponCode: string | undefined;
     if (data.couponCode) {
       const coupon = await Coupon.findOne({
@@ -297,7 +362,12 @@ export async function checkout(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      const afterItemDiscount = subtotal - totalItemDiscount;
+      if (coupon.usageLimit !== undefined && coupon.usedCount >= coupon.usageLimit) {
+        res.status(400).json(fail("Coupon usage limit reached", "VALIDATION_ERROR"));
+        return;
+      }
+
+      const afterItemDiscount = totals.subtotal - totals.totalItemDiscount;
       if (afterItemDiscount < coupon.minOrderAmount) {
         res.status(400).json(
           fail(
@@ -308,33 +378,42 @@ export async function checkout(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      if (coupon.usageLimit !== undefined && coupon.usedCount >= coupon.usageLimit) {
-        res.status(400).json(fail("Coupon usage limit reached", "VALIDATION_ERROR"));
-        return;
-      }
-
-      if (coupon.discountType === "percentage") {
-        couponDiscount = Math.round(afterItemDiscount * (coupon.discountValue / 100));
-        if (coupon.maxDiscountAmount > 0 && couponDiscount > coupon.maxDiscountAmount) {
-          couponDiscount = coupon.maxDiscountAmount;
-        }
-      } else {
-        couponDiscount = Math.min(coupon.discountValue, afterItemDiscount);
-      }
-
       couponCode = coupon.code;
     }
 
-    const grandTotal = subtotal - totalItemDiscount - billDiscount - couponDiscount + totalGST;
+    const { subtotal, totalItemDiscount, billDiscount, couponDiscount, totalGST, grandTotal, items: calculatedItems } = totals;
 
-    if (grandTotal < 0) {
-      res.status(400).json(fail("Grand total cannot be negative", "VALIDATION_ERROR"));
-      return;
+    // Build invoice items with product references
+    const productIds = data.items.map((item) => item.productId);
+    const products = await Product.find({ _id: { $in: productIds } }).lean();
+    const productMap = new Map(products.map((p) => [String(p._id), p]));
+
+    const invoiceItems = calculatedItems.map((item) => {
+      const product = productMap.get(item.productId)!;
+      return {
+        product: product._id,
+        name: item.name,
+        sku: item.sku,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discount: item.discount,
+        discountType: item.discountType,
+        gstPercent: item.gstPercent,
+        gstAmount: item.gstAmount,
+        total: item.total,
+      };
+    });
+
+    // Compute GST breakdown
+    let cgstTotal = 0;
+    let sgstTotal = 0;
+    for (const item of calculatedItems) {
+      const halfGST = Math.round(item.gstAmount / 2);
+      cgstTotal += halfGST;
+      sgstTotal += item.gstAmount - halfGST;
     }
 
-    // Validate payments
-    // Tolerance accounts for rounding differences between frontend (rupees) and backend (paise)
-    // when computing GST: Math.round(price_rupees * gst / 100) vs Math.round(price_paise * gst / 100)
+    // Validate payments — amount must match backend-computed grand total
     const totalPaid = data.payments.reduce((sum, p) => sum + rupeesToPaise(p.amount), 0);
     if (Math.abs(totalPaid - grandTotal) > 50) {
       res.status(400).json(
@@ -608,7 +687,9 @@ export async function validateCoupon(req: Request, res: Response): Promise<void>
     return;
   }
 
-  if (parsed.data.subtotal < coupon.minOrderAmount) {
+  const subtotalPaise = rupeesToPaise(parsed.data.subtotal);
+
+  if (subtotalPaise < coupon.minOrderAmount) {
     res.status(400).json(
       fail(
         `Minimum order amount ₹${(coupon.minOrderAmount / 100).toFixed(2)} required`,
@@ -620,12 +701,12 @@ export async function validateCoupon(req: Request, res: Response): Promise<void>
 
   let discount = 0;
   if (coupon.discountType === "percentage") {
-    discount = Math.round(parsed.data.subtotal * (coupon.discountValue / 100));
+    discount = Math.round(subtotalPaise * (coupon.discountValue / 100));
     if (coupon.maxDiscountAmount > 0 && discount > coupon.maxDiscountAmount) {
       discount = coupon.maxDiscountAmount;
     }
   } else {
-    discount = Math.min(coupon.discountValue, parsed.data.subtotal);
+    discount = Math.min(coupon.discountValue, subtotalPaise);
   }
 
   res.status(200).json(
@@ -637,6 +718,35 @@ export async function validateCoupon(req: Request, res: Response): Promise<void>
       calculatedDiscount: paiseToRupees(discount),
     }),
   );
+}
+
+export async function calculateOrder(req: Request, res: Response): Promise<void> {
+  const parsed = calculateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const messages = Object.entries(fieldErrors)
+      .map(([field, errs]) => `${field}: ${(errs ?? []).join(", ")}`)
+      .join("; ");
+    res.status(400).json(
+      fail(messages || "Please check your input", "VALIDATION_ERROR"),
+    );
+    return;
+  }
+
+  try {
+    const totals = await calculateOrderTotals(parsed.data);
+    res.status(200).json(ok({
+      subtotal: paiseToRupees(totals.subtotal),
+      totalItemDiscount: paiseToRupees(totals.totalItemDiscount),
+      billDiscount: paiseToRupees(totals.billDiscount),
+      couponDiscount: paiseToRupees(totals.couponDiscount),
+      totalGST: paiseToRupees(totals.totalGST),
+      grandTotal: paiseToRupees(totals.grandTotal),
+    }));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to calculate order";
+    res.status(400).json(fail(message, "CALCULATION_ERROR"));
+  }
 }
 
 export async function emailInvoice(req: Request, res: Response): Promise<void> {

@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   selectPOSItems,
-  selectPOSGrandTotal,
   selectPOSItemCount,
+  selectPOSBillDiscount,
   clearPOSState,
 } from '@/store/slices/pos.slice';
-import { usePOSProducts } from '../hooks/use-pos';
+import { usePOSProducts, useCalculateOrder } from '../hooks/use-pos';
 import { POSHeader } from '../components/POSHeader';
 import { ProductSearch } from '../components/ProductSearch';
 import { ProductGrid } from '../components/ProductGrid';
@@ -19,27 +19,35 @@ export function POSPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const cartItems = useAppSelector(selectPOSItems);
-  const grandTotal = useAppSelector(selectPOSGrandTotal);
   const itemCount = useAppSelector(selectPOSItemCount);
+  const billDiscount = useAppSelector(selectPOSBillDiscount);
+  const couponCode = useAppSelector((state) => state.pos.couponCode);
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [showPayment, setShowPayment] = useState(false);
   const [completedInvoiceId, setCompletedInvoiceId] = useState<string | null>(null);
+  const [backendGrandTotal, setBackendGrandTotal] = useState<number | null>(null);
+  const [calculateError, setCalculateError] = useState<string | null>(null);
 
   const { data: productsData } = usePOSProducts(search, categoryFilter);
   const products = productsData?.data ?? [];
+  const calculateOrder = useCalculateOrder();
 
   const searchRef = useRef<HTMLInputElement>(null);
 
   const handleClearAll = useCallback(() => {
     dispatch(clearPOSState());
     setShowPayment(false);
+    setBackendGrandTotal(null);
+    setCalculateError(null);
   }, [dispatch]);
 
   const handleNewTransaction = useCallback(() => {
     dispatch(clearPOSState());
     setCompletedInvoiceId(null);
+    setBackendGrandTotal(null);
+    setCalculateError(null);
     setSearch('');
     setTimeout(() => searchRef.current?.focus(), 50);
   }, [dispatch]);
@@ -51,6 +59,7 @@ export function POSPage() {
 
   const handlePaymentComplete = useCallback((invoiceId: string) => {
     setShowPayment(false);
+    setBackendGrandTotal(null);
     setCompletedInvoiceId(invoiceId);
   }, []);
 
@@ -58,12 +67,39 @@ export function POSPage() {
     handleNewTransaction();
   }, [handleNewTransaction]);
 
+  const handlePayClick = useCallback(() => {
+    if (cartItems.length === 0) return;
+
+    setCalculateError(null);
+
+    calculateOrder.mutate(
+      {
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          ...(item.discount > 0 && { discount: item.discount, discountType: item.discountType }),
+        })),
+        ...(billDiscount > 0 && { discount: billDiscount, discountType: 'flat' as const }),
+        ...(couponCode != null && { couponCode }),
+      },
+      {
+        onSuccess: (res) => {
+          setBackendGrandTotal(res.data.grandTotal);
+          setShowPayment(true);
+        },
+        onError: (err: Error) => {
+          setCalculateError(err.message || 'Failed to calculate order');
+        },
+      },
+    );
+  }, [cartItems, billDiscount, couponCode, calculateOrder]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'F10') {
         e.preventDefault();
         if (cartItems.length > 0 && !showPayment && !completedInvoiceId) {
-          setShowPayment(true);
+          handlePayClick();
         }
       }
       if (e.altKey && e.key === 'n') {
@@ -77,7 +113,7 @@ export function POSPage() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [cartItems.length, showPayment, completedInvoiceId, handleNewTransaction, handleBackToDashboard]);
+  }, [cartItems.length, showPayment, completedInvoiceId, handlePayClick, handleNewTransaction, handleBackToDashboard]);
 
   if (completedInvoiceId) {
     return (
@@ -117,17 +153,22 @@ export function POSPage() {
         {/* Right: Cart Panel */}
         <div className="flex w-[420px] flex-col bg-surface">
           <POSCart
-            onPay={() => {
-              if (cartItems.length > 0) setShowPayment(true);
-            }}
+            onPay={handlePayClick}
             onClearAll={handleClearAll}
           />
         </div>
       </div>
 
-      {showPayment && (
+      {/* Calculate error display */}
+      {calculateError && (
+        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+          {calculateError}
+        </div>
+      )}
+
+      {showPayment && backendGrandTotal !== null && (
         <PaymentModal
-          grandTotal={grandTotal}
+          grandTotal={backendGrandTotal}
           onClose={() => setShowPayment(false)}
           onComplete={handlePaymentComplete}
         />

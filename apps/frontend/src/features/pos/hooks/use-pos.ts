@@ -4,6 +4,7 @@ import {
   searchPOSProducts,
   getProductByBarcode,
   checkout,
+  calculateOrder,
   listPOSInvoices,
   getPOSInvoice,
   voidPOSInvoice,
@@ -116,5 +117,14 @@ export function useWhatsAppLink() {
 
   return useMutation({
     mutationFn: (id: string) => getPOSWhatsAppLink(id, getToken),
+  });
+}
+
+export function useCalculateOrder() {
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: (payload: Omit<CheckoutPayload, 'payments'>) =>
+      calculateOrder(payload, getToken),
   });
 }
