@@ -31,7 +31,7 @@ import { InvoiceHistoryPage } from '@/features/pos/pages/InvoiceHistoryPage';
 import { CouponsPage } from '@/features/pos/pages/CouponsPage';
 import { SettingsPage } from '@/features/settings/pages/SettingsPage';
 import { OrdersPage } from '@/features/orders/pages/OrdersPage';
-import { PublicRoute, AdminRoute, CustomerRoute } from '@/app/route-guards';
+import { PublicRoute, AdminRoute, ProtectedStoreRoute } from '@/app/route-guards';
 
 export const router = createBrowserRouter([
   {
@@ -83,27 +83,30 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // ── Customer / Store routes ────────────────────────────────────────────
+      // ── Store routes ──────────────────────────────────────────────────────────
       {
-        element: <CustomerRoute />,
+        path: 'store',
+        element: <StoreLayout />,
         children: [
+          // Public — no login required
+          { index: true, element: <StoreHomePage /> },
+          { path: 'products', element: <StoreProductsPage /> },
+          { path: 'products/:id', element: <StoreProductDetailPage /> },
+          { path: 'categories', element: <StoreCategoriesPage /> },
+          { path: 'cart', element: <StoreCartPage /> },
+          { path: 'search', element: <StoreSearchPage /> },
+          { path: 'about', element: <StoreAboutPage /> },
+
+          // Protected — login required
           {
-            path: 'store',
-            element: <StoreLayout />,
+            element: <ProtectedStoreRoute />,
             children: [
-              { index: true, element: <StoreHomePage /> },
-              { path: 'products', element: <StoreProductsPage /> },
-              { path: 'products/:id', element: <StoreProductDetailPage /> },
-              { path: 'categories', element: <StoreCategoriesPage /> },
-              { path: 'cart', element: <StoreCartPage /> },
               { path: 'checkout', element: <StoreCheckoutPage /> },
               { path: 'orders', element: <StoreMyOrdersPage /> },
               { path: 'orders/:id', element: <StoreOrderDetailPage /> },
               { path: 'orders/:id/success', element: <StoreOrderSuccessPage /> },
               { path: 'profile', element: <StoreProfilePage /> },
               { path: 'profile/*', element: <StoreProfilePage /> },
-              { path: 'search', element: <StoreSearchPage /> },
-              { path: 'about', element: <StoreAboutPage /> },
             ],
           },
         ],

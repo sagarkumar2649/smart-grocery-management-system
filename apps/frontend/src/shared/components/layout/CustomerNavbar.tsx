@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useClerk, useUser } from '@clerk/clerk-react';
+import { useClerk, useUser, useAuth } from '@clerk/clerk-react';
 import { useAppSelector } from '@/store/hooks';
 import { selectCartCount } from '@/store/slices/cart.slice';
 import { useStoreSettings } from '@/features/store/hooks/use-store-settings';
@@ -49,6 +49,7 @@ export function CustomerNavbar() {
   const location = useLocation();
   const { signOut } = useClerk();
   const { user } = useUser();
+  const { isSignedIn } = useAuth();
   const cartCount = useAppSelector(selectCartCount);
   const { data: settingsRes } = useStoreSettings();
   const storeName = settingsRes?.data?.storeName ?? '';
@@ -169,25 +170,37 @@ export function CustomerNavbar() {
             {/* Profile — desktop */}
             <div className="hidden lg:flex items-center gap-2">
               <div className="h-px w-px bg-gray-200 mx-1" />
-              <Link
-                to="/store/profile"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-foreground transition-colors"
-              >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={displayName} className="h-7 w-7 rounded-full object-cover" />
-                ) : (
-                  <UserIcon className="h-5 w-5" />
-                )}
-                <span className="max-w-[100px] truncate">{displayName}</span>
-              </Link>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                aria-label="Sign out"
-              >
-                <LogOutIcon />
-              </button>
+              {isSignedIn ? (
+                <>
+                  <Link
+                    to="/store/profile"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-foreground transition-colors"
+                  >
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={displayName} className="h-7 w-7 rounded-full object-cover" />
+                    ) : (
+                      <UserIcon className="h-5 w-5" />
+                    )}
+                    <span className="max-w-[100px] truncate">{displayName}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                    aria-label="Sign out"
+                  >
+                    <LogOutIcon />
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-teal-800"
+                >
+                  <UserIcon className="h-4 w-4" />
+                  <span>Sign In</span>
+                </Link>
+              )}
             </div>
 
             {/* Mobile menu toggle */}
@@ -245,21 +258,34 @@ export function CustomerNavbar() {
                 </Link>
               );
             })}
-            <Link
-              to="/store/profile"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              Profile
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-            >
-              <LogOutIcon />
-              Sign Out
-            </button>
+            {isSignedIn ? (
+              <>
+                <Link
+                  to="/store/profile"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Profile
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOutIcon />
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
+              >
+                <UserIcon className="h-5 w-5" />
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       )}

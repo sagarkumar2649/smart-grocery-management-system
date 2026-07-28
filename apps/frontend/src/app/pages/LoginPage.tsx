@@ -1,9 +1,17 @@
 import { SignIn } from '@clerk/clerk-react';
+import { useLocation } from 'react-router-dom';
 
 export function LoginPage() {
+  const location = useLocation();
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4 sm:bg-muted/50">
-      <SignIn routing="path" path="/login" />
+      <SignIn
+        routing="path"
+        path="/login"
+        afterSignInUrl={from || '/store'}
+      />
     </div>
   );
 }

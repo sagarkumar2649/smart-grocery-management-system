@@ -18,12 +18,21 @@ function AuthLoadingSpinner() {
 export function PublicRoute() {
   const { isLoaded, isSignedIn } = useAuth();
   const { role, isLoading } = useAppUser();
+  const location = useLocation();
 
   if (!isLoaded || (isSignedIn && isLoading)) return <AuthLoadingSpinner />;
 
   if (isSignedIn) {
-    // Send to the right home based on role
-    return <Navigate to={role === 'ADMIN' ? '/dashboard' : '/store'} replace />;
+    // Admin always goes to the dashboard
+    if (role === 'ADMIN') {
+      return <Navigate to="/dashboard" replace />;
+    }
+    // Customer: return to the page they were redirected from, or store home
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+    if (from && from.startsWith('/store')) {
+      return <Navigate to={from} replace />;
+    }
+    return <Navigate to="/store" replace />;
   }
 
   return <Outlet />;
@@ -84,6 +93,28 @@ export function CustomerRoute() {
 
   if (role !== 'CUSTOMER') {
     // Admin visiting customer routes — redirect to dashboard
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+}
+
+// ── ProtectedStoreRoute — CUSTOMER-only for checkout / orders / profile ───────
+export function ProtectedStoreRoute() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { role, isLoading, isError } = useAppUser();
+  const location = useLocation();
+
+  if (!isLoaded || (isSignedIn && isLoading)) return <AuthLoadingSpinner />;
+
+  if (!isSignedIn) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (isError || role === null) return <AuthLoadingSpinner />;
+
+  // Admin must never access customer store routes
+  if (role === 'ADMIN') {
     return <Navigate to="/dashboard" replace />;
   }
 
