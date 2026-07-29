@@ -41,6 +41,8 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^24.2.0",
+    "@types/nodemailer": "^8.0.1",
+    "@types/pdfkit": "^0.17.6",
     "tsx": "^4.20.5",
     "typescript": "^5.9.3"
   }
