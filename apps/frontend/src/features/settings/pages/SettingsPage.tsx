@@ -135,7 +135,7 @@ export function SettingsPage() {
       if (!prev) return prev;
       return {
         ...prev,
-        interiorGallery: prev.interiorGallery.filter(
+        interiorGallery: (prev.interiorGallery ?? []).filter(
           (i) => i.publicId !== publicId,
         ),
       };

@@ -99,6 +99,26 @@ export function CustomerRoute() {
   return <Outlet />;
 }
 
+// ── StorefrontGuard — lets guests & customers through, blocks admins ─────────
+export function StorefrontGuard() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { role, isLoading, isError } = useAppUser();
+
+  if (!isLoaded) return <AuthLoadingSpinner />;
+
+  if (isSignedIn) {
+    // Wait for role to resolve before rendering the storefront
+    if (isLoading || isError || role === null) return <AuthLoadingSpinner />;
+
+    // Admin must never see the storefront
+    if (role === 'ADMIN') {
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
+  return <Outlet />;
+}
+
 // ── ProtectedStoreRoute — CUSTOMER-only for checkout / orders / profile ───────
 export function ProtectedStoreRoute() {
   const { isLoaded, isSignedIn } = useAuth();

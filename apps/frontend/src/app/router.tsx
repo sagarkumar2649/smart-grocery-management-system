@@ -31,7 +31,7 @@ import { InvoiceHistoryPage } from '@/features/pos/pages/InvoiceHistoryPage';
 import { CouponsPage } from '@/features/pos/pages/CouponsPage';
 import { SettingsPage } from '@/features/settings/pages/SettingsPage';
 import { OrdersPage } from '@/features/orders/pages/OrdersPage';
-import { PublicRoute, AdminRoute, ProtectedStoreRoute } from '@/app/route-guards';
+import { PublicRoute, AdminRoute, StorefrontGuard, ProtectedStoreRoute } from '@/app/route-guards';
 
 export const router = createBrowserRouter([
   {
@@ -88,25 +88,30 @@ export const router = createBrowserRouter([
         path: 'store',
         element: <StoreLayout />,
         children: [
-          // Public — no login required
-          { index: true, element: <StoreHomePage /> },
-          { path: 'products', element: <StoreProductsPage /> },
-          { path: 'products/:id', element: <StoreProductDetailPage /> },
-          { path: 'categories', element: <StoreCategoriesPage /> },
-          { path: 'cart', element: <StoreCartPage /> },
-          { path: 'search', element: <StoreSearchPage /> },
-          { path: 'about', element: <StoreAboutPage /> },
-
-          // Protected — login required
           {
-            element: <ProtectedStoreRoute />,
+            element: <StorefrontGuard />,
             children: [
-              { path: 'checkout', element: <StoreCheckoutPage /> },
-              { path: 'orders', element: <StoreMyOrdersPage /> },
-              { path: 'orders/:id', element: <StoreOrderDetailPage /> },
-              { path: 'orders/:id/success', element: <StoreOrderSuccessPage /> },
-              { path: 'profile', element: <StoreProfilePage /> },
-              { path: 'profile/*', element: <StoreProfilePage /> },
+              // Public — no login required
+              { index: true, element: <StoreHomePage /> },
+              { path: 'products', element: <StoreProductsPage /> },
+              { path: 'products/:id', element: <StoreProductDetailPage /> },
+              { path: 'categories', element: <StoreCategoriesPage /> },
+              { path: 'cart', element: <StoreCartPage /> },
+              { path: 'search', element: <StoreSearchPage /> },
+              { path: 'about', element: <StoreAboutPage /> },
+
+              // Protected — login required
+              {
+                element: <ProtectedStoreRoute />,
+                children: [
+                  { path: 'checkout', element: <StoreCheckoutPage /> },
+                  { path: 'orders', element: <StoreMyOrdersPage /> },
+                  { path: 'orders/:id', element: <StoreOrderDetailPage /> },
+                  { path: 'orders/:id/success', element: <StoreOrderSuccessPage /> },
+                  { path: 'profile', element: <StoreProfilePage /> },
+                  { path: 'profile/*', element: <StoreProfilePage /> },
+                ],
+              },
             ],
           },
         ],

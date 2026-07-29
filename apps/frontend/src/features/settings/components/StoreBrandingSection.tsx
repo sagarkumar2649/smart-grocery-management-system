@@ -72,7 +72,7 @@ export function StoreBrandingSection({
             Store Photos
           </p>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 mb-3">
-            {settings.interiorGallery.map((img) => (
+            {(settings.interiorGallery ?? []).map((img) => (
               <div key={img.publicId} className="relative group">
                 <img
                   src={img.url}

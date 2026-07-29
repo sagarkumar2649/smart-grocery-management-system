@@ -11,6 +11,7 @@ import { useAuth, useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
+const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL as string)?.toLowerCase?.() ?? "";
 
 export interface AppUserData {
   id: string;
@@ -60,11 +61,18 @@ export function useAppUser() {
     retry: 2,
   });
 
+  // If the user's email matches the configured admin email,
+  // always treat them as ADMIN regardless of backend response.
+  const hasAdminEmail = !!email && ADMIN_EMAIL.length > 0 && email.trim().toLowerCase() === ADMIN_EMAIL;
+
+  const rawRole = query.data?.role ?? null;
+  const effectiveRole: 'ADMIN' | 'CUSTOMER' | null = hasAdminEmail ? 'ADMIN' : rawRole;
+
   return {
     appUser: query.data ?? null,
-    role: query.data?.role ?? null,
-    isAdmin: query.data?.role === 'ADMIN',
-    isCustomer: query.data?.role === 'CUSTOMER',
+    role: effectiveRole,
+    isAdmin: effectiveRole === 'ADMIN',
+    isCustomer: effectiveRole === 'CUSTOMER',
     isLoading: query.isLoading,
     isError: query.isError,
   };

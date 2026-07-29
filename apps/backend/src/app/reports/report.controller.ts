@@ -47,13 +47,18 @@ function parseDateRange(query: Record<string, string>): { start: Date; end: Date
   return { start, end };
 }
 
-function getDateGroupId(period: string): "$year" | "$month" | "$week" | "$dayOfMonth" {
+function buildTrendGroupId(period: string, dateField: string = "$createdAt"): Record<string, unknown> {
+  const base = { year: { $year: dateField } } as Record<string, unknown>;
   switch (period) {
-    case "daily": return "$dayOfMonth";
-    case "weekly": return "$week";
-    case "yearly": return "$year";
+    case "daily":
+      return { ...base, month: { $month: dateField }, day: { $dayOfMonth: dateField } };
+    case "weekly":
+      return { ...base, week: { $week: dateField } };
+    case "yearly":
+      return base;
     case "monthly":
-    default: return "$month";
+    default:
+      return { ...base, month: { $month: dateField } };
   }
 }
 
@@ -81,18 +86,13 @@ export async function getSalesReport(req: Request, res: Response): Promise<void>
       { $match: { type: "sale", createdAt: { $gte: start, $lte: end } } },
       {
         $group: {
-          _id: {
-            [getDateGroupId(period)]: "$createdAt",
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
-            day: { $dayOfMonth: "$createdAt" },
-          },
+          _id: buildTrendGroupId(period),
           quantity: { $sum: "$quantity" },
           revenue: { $sum: { $multiply: ["$quantity", { $ifNull: ["$unitCost", 0] }] } },
           transactions: { $sum: 1 },
         },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.week": 1, "_id.day": 1 } },
     ]);
 
     const byProduct = await StockMovement.aggregate([
@@ -170,18 +170,13 @@ export async function getPurchaseReport(req: Request, res: Response): Promise<vo
       { $match: { createdAt: { $gte: start, $lte: end } } },
       {
         $group: {
-          _id: {
-            [getDateGroupId(period)]: "$createdAt",
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
-            day: { $dayOfMonth: "$createdAt" },
-          },
+          _id: buildTrendGroupId(period),
           amount: { $sum: "$totalAmount" },
           orders: { $sum: 1 },
           paid: { $sum: "$paidAmount" },
         },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.week": 1, "_id.day": 1 } },
     ]);
 
     const bySupplier = await PurchaseOrder.aggregate([
@@ -350,33 +345,23 @@ export async function getProfitLossReport(req: Request, res: Response): Promise<
       { $match: { type: "sale", createdAt: { $gte: start, $lte: end } } },
       {
         $group: {
-          _id: {
-            [getDateGroupId(period)]: "$createdAt",
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
-            day: { $dayOfMonth: "$createdAt" },
-          },
+          _id: buildTrendGroupId(period),
           revenue: { $sum: { $multiply: ["$quantity", { $ifNull: ["$unitCost", 0] }] } },
           units: { $sum: "$quantity" },
         },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.week": 1, "_id.day": 1 } },
     ]);
 
     const purchaseTrend = await PurchaseOrder.aggregate([
       { $match: { createdAt: { $gte: start, $lte: end }, status: { $ne: "cancelled" } } },
       {
         $group: {
-          _id: {
-            [getDateGroupId(period)]: "$createdAt",
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
-            day: { $dayOfMonth: "$createdAt" },
-          },
+          _id: buildTrendGroupId(period),
           cost: { $sum: "$totalAmount" },
         },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.week": 1, "_id.day": 1 } },
     ]);
 
     res.status(200).json(ok({
@@ -493,14 +478,11 @@ export async function getCustomerReport(req: Request, res: Response): Promise<vo
       { $match: { createdAt: { $gte: start, $lte: end } } },
       {
         $group: {
-          _id: {
-            [((req.query.period as string) || "monthly") === "daily" ? "$dayOfMonth" : "$month"]: "$createdAt",
-            year: { $year: "$createdAt" },
-          },
+          _id: buildTrendGroupId((req.query.period as string) || "monthly"),
           count: { $sum: 1 },
         },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1 } },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.week": 1, "_id.day": 1 } },
     ]);
 
     res.status(200).json(ok({

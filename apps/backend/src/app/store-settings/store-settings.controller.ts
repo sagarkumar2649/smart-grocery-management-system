@@ -14,10 +14,17 @@ export async function getStoreSettings(
   let settings = await StoreSettings.findOne();
 
   if (!settings) {
-    settings = await StoreSettings.create({});
+    settings = await StoreSettings.create({ storeName: "My Store" });
   }
 
-  res.status(200).json(ok(settings.toObject()));
+  const obj = settings.toObject();
+
+  // Guard: ensure arrays are never undefined (Atlas migration may drop empty arrays)
+  if (!obj.interiorGallery) {
+    obj.interiorGallery = [];
+  }
+
+  res.status(200).json(ok(obj));
 }
 
 /**
@@ -142,5 +149,11 @@ export async function updateStoreSettings(
 
   await settings.save();
 
-  res.status(200).json(ok(settings.toObject()));
+  const updated = settings.toObject();
+
+  if (!updated.interiorGallery) {
+    updated.interiorGallery = [];
+  }
+
+  res.status(200).json(ok(updated));
 }

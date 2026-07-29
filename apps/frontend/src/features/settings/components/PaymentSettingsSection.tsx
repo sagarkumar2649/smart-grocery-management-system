@@ -37,11 +37,12 @@ export function PaymentSettingsSection({
     }
   }, [settings.gstRate]);
 
+  const payMethods = settings.acceptedPayments ?? [];
+
   const togglePaymentMethod = (method: string) => {
-    const current = settings.acceptedPayments;
-    const updated = current.includes(method)
-      ? current.filter((m) => m !== method)
-      : [...current, method];
+    const updated = payMethods.includes(method)
+      ? payMethods.filter((m) => m !== method)
+      : [...payMethods, method];
     onChange({ acceptedPayments: updated });
   };
 
@@ -152,7 +153,7 @@ export function PaymentSettingsSection({
               </p>
               <div className="flex flex-wrap gap-2">
                 {PAYMENT_METHODS.map((method) => {
-                  const isActive = settings.acceptedPayments.includes(method);
+                  const isActive = payMethods.includes(method);
                   return (
                     <button
                       key={method}

@@ -20,6 +20,8 @@ export function ShippingSettingsSection({
     estimatedDays: number;
   }>({ name: "", rate: 0, estimatedDays: 5 });
 
+  const zones = settings.shippingZones ?? [];
+
   const handleAddZone = () => {
     const newZone: ShippingZone = {
       id: crypto.randomUUID(),
@@ -29,14 +31,14 @@ export function ShippingSettingsSection({
       active: true,
     };
     onChange({
-      shippingZones: [...settings.shippingZones, newZone],
+      shippingZones: [...zones, newZone],
     });
     setZoneForm({ name: "", rate: 0, estimatedDays: 5 });
   };
 
   const handleUpdateZone = () => {
     if (editingZoneIndex === null) return;
-    const updated = settings.shippingZones.map((zone, i) =>
+    const updated = zones.map((zone, i) =>
       i === editingZoneIndex
         ? {
             ...zone,
@@ -52,19 +54,19 @@ export function ShippingSettingsSection({
   };
 
   const handleDeleteZone = (index: number) => {
-    const updated = settings.shippingZones.filter((_, i) => i !== index);
+    const updated = zones.filter((_, i) => i !== index);
     onChange({ shippingZones: updated });
   };
 
   const handleToggleZoneActive = (index: number) => {
-    const updated = settings.shippingZones.map((zone, i) =>
+    const updated = zones.map((zone, i) =>
       i === index ? { ...zone, active: !zone.active } : zone
     );
     onChange({ shippingZones: updated });
   };
 
   const startEditing = (index: number) => {
-    const zone = settings.shippingZones[index];
+    const zone = zones[index];
     if (!zone) return;
     setEditingZoneIndex(index);
     setZoneForm({
@@ -318,7 +320,7 @@ export function ShippingSettingsSection({
                   </tr>
                 )}
 
-                {settings.shippingZones.map((zone, index) => (
+                {zones.map((zone, index) => (
                   <tr key={zone.id} className="hover:bg-muted/20">
                     <td className="px-4 py-3 text-foreground">
                       {editingZoneIndex === index ? (
@@ -432,7 +434,7 @@ export function ShippingSettingsSection({
                   </tr>
                 ))}
 
-                {settings.shippingZones.length === 0 &&
+                {zones.length === 0 &&
                   editingZoneIndex !== -1 && (
                     <tr>
                       <td

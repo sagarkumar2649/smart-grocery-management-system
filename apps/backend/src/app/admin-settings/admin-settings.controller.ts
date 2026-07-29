@@ -17,7 +17,22 @@ export async function getAdminSettings(
     settings = await AdminSettings.create({});
   }
 
-  res.status(200).json(ok(settings.toObject()));
+  const obj = settings.toObject();
+
+  // Guard: ensure nested subdocs & arrays are never undefined
+  // (Atlas migration / minimize option can drop empty objects/arrays)
+  if (!obj.shipping) {
+    obj.shipping = { shippingZones: [] } as typeof obj.shipping;
+  } else if (!obj.shipping.shippingZones) {
+    obj.shipping.shippingZones = [];
+  }
+  if (!obj.payment) {
+    obj.payment = { acceptedPayments: [] } as typeof obj.payment;
+  } else if (!obj.payment.acceptedPayments) {
+    obj.payment.acceptedPayments = [];
+  }
+
+  res.status(200).json(ok(obj));
 }
 
 /**
@@ -102,7 +117,20 @@ export async function updateAdminSettings(
 
   await settings.save();
 
-  res.status(200).json(ok(settings.toObject()));
+  const updated = settings.toObject();
+
+  if (!updated.shipping) {
+    updated.shipping = { shippingZones: [] } as typeof updated.shipping;
+  } else if (!updated.shipping.shippingZones) {
+    updated.shipping.shippingZones = [];
+  }
+  if (!updated.payment) {
+    updated.payment = { acceptedPayments: [] } as typeof updated.payment;
+  } else if (!updated.payment.acceptedPayments) {
+    updated.payment.acceptedPayments = [];
+  }
+
+  res.status(200).json(ok(updated));
 }
 
 /**
